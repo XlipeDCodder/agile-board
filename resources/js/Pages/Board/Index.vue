@@ -48,9 +48,21 @@ function onDragEnd() {
     router.patch(route('board.reorder'), { columns: reorderedData }, { preserveScroll: true });
 }
 
+// AQUI ESTÁ A CORREÇÃO CRUCIAL
 const openCreateItemModal = (columnId) => {
-    itemForm.reset();
+
+    itemForm.id = null;
+    itemForm.title = '';
+    itemForm.description = '';
+    itemForm.type = 'task';
+    itemForm.priority = 'Média';
+    itemForm.assignee_id = null;
+    itemForm.due_date = null;
+    itemForm.estimation = null;
+    itemForm.subtasks = [];
     itemForm.column_id = columnId;
+    itemForm.clearErrors(); 
+
     showItemModal.value = true;
 };
 
@@ -72,14 +84,18 @@ const openEditItemModal = (item) => {
 const closeModal = () => { showItemModal.value = false; };
 
 const saveItem = () => {
-    const routeName = itemForm.id ? 'items.update' : 'items.store';
-    const routeParams = itemForm.id ? itemForm.id : [];
-    itemForm.transform(data => ({ ...data, subtasks: undefined })).put(route(routeName, routeParams), {
-        preserveScroll: true,
-        onSuccess: () => closeModal(),
-    });
+    if (itemForm.id) {
+        itemForm.put(route('items.update', itemForm.id), {
+            preserveScroll: true,
+            onSuccess: () => closeModal(),
+        });
+    } else {
+        itemForm.post(route('items.store'), {
+            preserveScroll: true,
+            onSuccess: () => closeModal(),
+        });
+    }
 };
-
 
 const addSubtask = () => {
     newSubtaskForm.post(route('subtasks.store'), {
@@ -87,6 +103,7 @@ const addSubtask = () => {
         preserveState: true,
         onSuccess: () => {
             newSubtaskForm.reset('title');
+            
         },
     });
 };
@@ -94,7 +111,7 @@ const addSubtask = () => {
 const toggleSubtask = (subtask) => {
     router.patch(route('subtasks.update', subtask.id), {}, {
         preserveScroll: true,
-        preserveState: true, 
+        preserveState: true,
     });
 };
 
@@ -105,7 +122,7 @@ const priorityClasses = (p) => ({ 'Baixa': 'bg-gray-400', 'Média': 'bg-yellow-5
     <Head title="Quadro Kanban" />
     <AuthenticatedLayout>
         <template #header>
-            <h2 class="font-semibold text-xl text-gray-800 leading-tight">Kanban Board</h2>
+            <h2 class="font-semibold text-xl text-gray-800 leading-tight">Quadro Kanban</h2>
         </template>
         <div class="py-12">
             <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">

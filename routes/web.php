@@ -7,6 +7,8 @@ use App\Http\Controllers\ItemController;
 use App\Http\Controllers\SubtaskController;
 use App\Http\Controllers\BacklogController;
 use App\Http\Controllers\CompletedController;
+use App\Http\Controllers\ColumnController;
+use App\Http\Controllers\Admin\ColumnManagementController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
@@ -35,6 +37,9 @@ Route::middleware('auth')->group(function () {
     Route::patch('/subtasks/{item}', [SubtaskController::class, 'update'])->name('subtasks.update');
     Route::get('/backlog', [BacklogController::class, 'index'])->name('backlog.index');
     Route::get('/completed', [CompletedController::class, 'index'])->name('completed.index');
+    Route::post('/columns', [ColumnController::class, 'store'])->name('columns.store');
+    Route::patch('/columns/reorder', [ColumnController::class, 'reorder'])->name('columns.reorder');
+    Route::get('/admin/columns', [ColumnManagementController::class, 'index'])->name('admin.columns.index');
 });
 
 require __DIR__.'/auth.php';
