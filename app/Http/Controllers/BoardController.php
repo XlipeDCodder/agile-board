@@ -28,7 +28,7 @@ class BoardController extends Controller
         if ($doneColumn) {
             $doneColumn->load(['items' => function ($query) {
                 $query->whereNull('parent_id')
-                      ->where('items.updated_at', '>=', now()->subHours(2)) 
+                      ->where('items.updated_at', '>=', now()->subMinutes(30)) 
                       ->with(['assignee', 'subtasks']);
             }]);
         }

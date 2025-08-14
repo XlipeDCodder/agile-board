@@ -12,50 +12,37 @@ const showingNavigationDropdown = ref(false);
 
 <template>
     <div>
-        <div class="min-h-screen bg-gray-100">
-            <nav
-                class="border-b border-gray-100 bg-white"
-            >
+        <!-- AQUI COMEÇAM AS MUDANÇAS VISUAIS -->
+        <div class="min-h-screen bg-primary">
+            <nav class="bg-secondary border-b border-accent">
                 <!-- Primary Navigation Menu -->
-                <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-                    <div class="flex h-16 justify-between">
+                <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                    <div class="flex justify-between h-16">
                         <div class="flex">
                             <!-- Logo -->
-                            <div class="flex shrink-0 items-center">
+                            <div class="shrink-0 flex items-center">
                                 <Link :href="route('dashboard')">
-                                    <ApplicationLogo
-                                        class="block h-9 w-auto fill-current text-gray-800"
-                                    />
+                                    <ApplicationLogo class="block h-9 w-auto fill-current text-text-primary" />
                                 </Link>
                             </div>
 
                             <!-- Navigation Links -->
-                            <div
-                                class="hidden space-x-8 sm:-my-px sm:ms-10 sm:flex"
-                            >
-                                <NavLink
-                                    :href="route('dashboard')"
-                                    :active="route().current('dashboard')"
-                                >
+                            <div class="hidden space-x-8 sm:-my-px sm:ms-10 sm:flex">
+                                <NavLink :href="route('dashboard')" :active="route().current('dashboard')">
                                     Dashboard
                                 </NavLink>
-
                                 <NavLink :href="route('board')" :active="route().current('board')">
                                     Quadro
                                 </NavLink>
-
                                 <NavLink :href="route('backlog.index')" :active="route().current('backlog.index')">
                                     Backlog
                                 </NavLink>
-
                                 <NavLink :href="route('completed.index')" :active="route().current('completed.index')">
                                     Concluídos
                                 </NavLink>
-
                                 <NavLink v-if="$page.props.auth.user.is_admin" :href="route('admin.columns.index')" :active="route().current('admin.columns.index')">
                                     Admin
                                 </NavLink>
-                                
                             </div>
                         </div>
 
@@ -197,11 +184,8 @@ const showingNavigationDropdown = ref(false);
             </nav>
 
             <!-- Page Heading -->
-            <header
-                class="bg-white shadow"
-                v-if="$slots.header"
-            >
-                <div class="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+            <header class="bg-secondary shadow" v-if="$slots.header">
+                <div class="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
                     <slot name="header" />
                 </div>
             </header>
