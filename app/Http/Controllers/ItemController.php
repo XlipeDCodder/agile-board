@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Item;
+use App\Models\ItemStatusHistory; // 1. Importe o novo model
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -18,13 +19,19 @@ class ItemController extends Controller
             'assignee_id' => 'nullable|exists:users,id',
             'due_date' => 'nullable|date',
             'column_id' => 'required|exists:columns,id',
-            'estimation' => 'nullable|numeric|min:0|max:20', // Adicionado
+            'estimation' => 'nullable|numeric|min:0|max:20',
         ]);
 
         $validated['creator_id'] = Auth::id();
         $validated['order_in_column'] = Item::where('column_id', $validated['column_id'])->max('order_in_column') + 1;
 
-        Item::create($validated);
+        $item = Item::create($validated);
+
+        
+        ItemStatusHistory::create([
+            'item_id' => $item->id,
+            'column_id' => $item->column_id,
+        ]);
 
         return back();
     }
@@ -39,7 +46,7 @@ class ItemController extends Controller
             'assignee_id' => 'nullable|exists:users,id',
             'due_date' => 'nullable|date',
             'column_id' => 'required|exists:columns,id',
-            'estimation' => 'nullable|numeric|min:0', // Adicionado
+            'estimation' => 'nullable|numeric|min:0|max:20',
         ]);
 
         $item->update($validated);

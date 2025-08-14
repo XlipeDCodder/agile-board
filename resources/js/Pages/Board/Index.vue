@@ -120,45 +120,54 @@ const priorityClasses = (p) => ({ 'Baixa': 'bg-gray-400', 'Média': 'bg-yellow-5
 
 <template>
     <Head title="Quadro Kanban" />
+
     <AuthenticatedLayout>
         <template #header>
             <h2 class="font-semibold text-xl text-gray-800 leading-tight">Quadro Kanban</h2>
         </template>
+
+        <!-- AQUI ESTÁ A MUDANÇA PRINCIPAL -->
         <div class="py-12">
-            <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
-                <div class="bg-gray-200 bg-opacity-25 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 p-6 lg:p-8 gap-6">
-                    <div v-for="column in boardColumns" :key="column.id" class="bg-gray-100 rounded-lg shadow-md flex flex-col">
-                        <div class="p-4 border-b flex justify-between items-center">
-                            <h2 class="text-lg font-semibold">{{ column.name }}</h2>
-                            <button @click="openCreateItemModal(column.id)" class="text-gray-400 hover:text-blue-500">
-                                <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" /></svg>
-                            </button>
+            <div class="max-w-full mx-auto sm:px-6 lg:px-8">
+                <!-- 1. Contentor que permite o scroll horizontal -->
+                <div class="overflow-x-auto pb-4">
+                    <!-- 2. Contentor flexível para as colunas, com um padding interno -->
+                    <div class="inline-flex space-x-6 px-1">
+                        <!-- O v-for agora está dentro do contentor flexível -->
+                        <div v-for="column in boardColumns" :key="column.id" class="bg-gray-100 rounded-lg shadow-md flex flex-col w-80 flex-shrink-0">
+                            <div class="p-4 border-b flex justify-between items-center">
+                                <h2 class="text-lg font-semibold">{{ column.name }}</h2>
+                                <button @click="openCreateItemModal(column.id)" class="text-gray-400 hover:text-blue-500">
+                                    <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" /></svg>
+                                </button>
+                            </div>
+                            <draggable v-model="column.items" group="items" item-key="id" class="p-4 space-y-4 flex-grow" @end="onDragEnd">
+                                <template #item="{element: item}">
+                                    <div @click="openEditItemModal(item)" class="bg-white p-3 rounded-md shadow cursor-pointer">
+                                        <div class="flex justify-between items-start">
+                                            <h3 class="font-bold text-gray-800">{{ item.title }}</h3>
+                                            <span class="w-3 h-3 rounded-full flex-shrink-0" :class="priorityClasses(item.priority)"></span>
+                                        </div>
+                                        <p class="text-sm text-gray-600 mt-2">{{ item.description }}</p>
+                                        <div v-if="item.subtasks && item.subtasks.length > 0" class="mt-3 border-t pt-2 text-xs text-gray-500 italic">
+                                            Existem subtarefas, clique para exibir
+                                        </div>
+                                        <div class="mt-3 flex justify-between items-center border-t pt-2">
+                                            <span class="text-xs text-gray-500">#{{ item.id }}</span>
+                                            <div v-if="item.estimation" class="text-xs font-bold bg-gray-200 text-gray-700 rounded-full px-2 py-1">{{ item.estimation }} pts</div>
+                                            <span class="px-2 py-1 text-xs font-semibold text-white bg-blue-500 rounded-full">{{ item.assignee ? item.assignee.name : 'Não atribuído' }}</span>
+                                        </div>
+                                    </div>
+                                </template>
+                            </draggable>
                         </div>
-                        <draggable v-model="column.items" group="items" item-key="id" class="p-4 space-y-4 flex-grow" @end="onDragEnd">
-                            <template #item="{element: item}">
-                                <div @click="openEditItemModal(item)" class="bg-white p-3 rounded-md shadow cursor-pointer">
-                                    <div class="flex justify-between items-start">
-                                        <h3 class="font-bold text-gray-800">{{ item.title }}</h3>
-                                        <span class="w-3 h-3 rounded-full flex-shrink-0" :class="priorityClasses(item.priority)"></span>
-                                    </div>
-                                    <p class="text-sm text-gray-600 mt-2">{{ item.description }}</p>
-                                    <div v-if="item.subtasks && item.subtasks.length > 0" class="mt-3 border-t pt-2 text-xs text-gray-500 italic">
-                                        Existem subtarefas, clique para exibir
-                                    </div>
-                                    <div class="mt-3 flex justify-between items-center border-t pt-2">
-                                        <span class="text-xs text-gray-500">#{{ item.id }}</span>
-                                        <div v-if="item.estimation" class="text-xs font-bold bg-gray-200 text-gray-700 rounded-full px-2 py-1">{{ item.estimation }} pts</div>
-                                        <span class="px-2 py-1 text-xs font-semibold text-white bg-blue-500 rounded-full">{{ item.assignee ? item.assignee.name : 'Não atribuído' }}</span>
-                                    </div>
-                                </div>
-                            </template>
-                        </draggable>
                     </div>
                 </div>
             </div>
         </div>
 
         <Modal :show="showItemModal" @close="closeModal">
+            <!-- O conteúdo do modal permanece o mesmo -->
             <div class="p-6">
                 <h2 class="text-2xl font-bold mb-4">{{ itemForm.id ? 'Editar Item' : 'Criar Novo Item' }}</h2>
                 <form @submit.prevent="saveItem">
@@ -182,7 +191,7 @@ const priorityClasses = (p) => ({ 'Baixa': 'bg-gray-400', 'Média': 'bg-yellow-5
                     </div>
                     <form @submit.prevent="addSubtask" class="mt-4 flex items-center space-x-2">
                         <input type="text" v-model="newSubtaskForm.title" placeholder="Adicionar nova subtarefa..." class="flex-grow block w-full rounded-md border-gray-300 shadow-sm text-sm">
-                        <button type="submit" :disabled="newSubtaskForm.processing" class="px-3 py-1.5 bg-green-500 text-white rounded-md text-sm">Adicionar</button>
+                        <button type="submit" :disabled="newSubtaskForm.processing" class="px-3 py-1.sem5 bg-green-500 text-white rounded-md text-sm">Adicionar</button>
                     </form>
                 </div>
             </div>
