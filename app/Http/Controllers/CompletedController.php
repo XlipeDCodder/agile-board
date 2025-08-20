@@ -25,7 +25,7 @@ class CompletedController extends Controller
             ->when($doneColumnId, function ($query) use ($doneColumnId) {
                 $query->where('column_id', $doneColumnId);
             })
-            ->with(['assignee', 'column'])
+            ->with(['assignees', 'column', 'subtasks', 'comments.user'])
             // Ordena pelos mais recentemente concluídos primeiro
             ->latest('updated_at')
             ->paginate(15);

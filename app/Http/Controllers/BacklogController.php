@@ -18,16 +18,16 @@ class BacklogController extends Controller
         
         $doneColumnId = Column::where('name', 'Feito')->value('id');
 
-        // Busca os itens paginados.
+
         $items = Item::query()
-            // Apenas tarefas "pai" (não subtarefas)
+
             ->whereNull('parent_id')
             // Exclui os itens da coluna "Feito", se ela existir
             ->when($doneColumnId, function ($query) use ($doneColumnId) {
                 $query->where('column_id', '!=', $doneColumnId);
             })
             // Carrega os relacionamentos necessários para a exibição
-            ->with(['assignee', 'column'])
+            ->with(['assignees', 'column', 'subtasks', 'comments.user'])
             // Ordena pelos mais recentes primeiro
             ->latest()
             // Pagina os resultados para melhor performance

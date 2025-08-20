@@ -3,7 +3,9 @@
 namespace App\Providers;
 
 use App\Models\Column;
+use App\Models\Item;
 use App\Policies\ColumnPolicy;
+use App\Policies\ItemPolicy;
 use Illuminate\Foundation\Support\Providers\AuthServiceProvider as ServiceProvider;
 
 class AuthServiceProvider extends ServiceProvider
@@ -14,7 +16,8 @@ class AuthServiceProvider extends ServiceProvider
      * @var array<class-string, class-string>
      */
     protected $policies = [
-        Column::class => ColumnPolicy::class, // Adicione a sua policy aqui
+        Column::class => ColumnPolicy::class,
+        Item::class => ItemPolicy::class, // Adicione a sua policy aqui
     ];
 
     /**

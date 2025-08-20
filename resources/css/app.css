@@ -1,3 +1,42 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+.multiselect__tags {
+    @apply bg-primary border-accent text-text-primary !important;
+}
+.multiselect__input, .multiselect__single {
+    @apply bg-primary text-text-primary !important;
+}
+.multiselect__content-wrapper {
+    @apply bg-secondary border-accent !important;
+}
+.multiselect__option {
+    @apply text-text-primary !important;
+}
+.multiselect__tag {
+    @apply bg-blue-500 text-white !important;
+}
+.multiselect__tag-icon:after {
+    @apply text-white !important;
+}
+.multiselect__tag-icon:focus, .multiselect__tag-icon:hover {
+    @apply bg-blue-700 !important;
+}
+
+/* Estilo para a opção que está ATIVA (hover) */
+.multiselect__option--highlight {
+    @apply bg-blue-500 text-white !important;
+}
+/* Estilo para a opção que já foi SELECIONADA (não ativa) */
+.multiselect__option--selected {
+    @apply bg-accent text-black font-semibold !important;
+}
+/* Estilo para a label "Selecionado" da opção selecionada */
+.multiselect__option--selected::after {
+    @apply text-black !important;
+}
+/* Estilo para a opção que está SELECIONADA E ATIVA (hover) */
+.multiselect__option--selected.multiselect__option--highlight {
+    @apply bg-blue-600 text-white !important;
+}

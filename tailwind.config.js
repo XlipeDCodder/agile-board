@@ -17,7 +17,7 @@ export default {
             },
             // AQUI ESTÁ A NOSSA NOVA PALETA DE CORES
             colors: {
-                'primary': '#121212',   // Fundo principal mais escuro
+                'primary': '#313131ff',   // Fundo principal mais escuro
                 'secondary': '#444444', // Fundo de elementos secundários (colunas, modais)
                 'accent': '#B0B0B0',    // Cor de destaque para bordas, ícones
                 'text-primary': '#E0E0E0', // Cor de texto principal (claro)

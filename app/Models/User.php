@@ -5,6 +5,7 @@ namespace App\Models;
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
@@ -59,8 +60,13 @@ class User extends Authenticatable
     /**
      * Define o relacionamento onde um usuário pode ser o responsável por muitos itens.
      */
-    public function assignedItems(): HasMany
+    public function assignedItems(): BelongsToMany
     {
-        return $this->hasMany(Item::class, 'assignee_id');
+        return $this->belongsToMany(Item::class, 'item_user');
+    }
+    
+    public function comments(): HasMany
+    {
+        return $this->hasMany(Comment::class);
     }
 }

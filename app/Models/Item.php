@@ -21,7 +21,7 @@ class Item extends Model
         'parent_id',
         'column_id',
         'creator_id',
-        'assignee_id',
+        // 'assignee_id' foi removido daqui
         'title',
         'description',
         'type',
@@ -30,7 +30,7 @@ class Item extends Model
         'estimation',
         'due_date',
         'order_in_column',
-        'completed_at', // AQUI ESTÁ A CORREÇÃO
+        'completed_at',
     ];
 
     /**
@@ -65,13 +65,25 @@ class Item extends Model
         return $this->belongsTo(User::class, 'creator_id');
     }
 
-    public function assignee(): BelongsTo
+    /**
+     * O relacionamento antigo assignee() foi removido.
+     */
+
+    /**
+     * Define o relacionamento onde um item pode ter muitos responsáveis (assignees).
+     */
+    public function assignees(): BelongsToMany
     {
-        return $this->belongsTo(User::class, 'assignee_id');
+        return $this->belongsToMany(User::class, 'item_user');
     }
 
     public function tags(): BelongsToMany
     {
         return $this->belongsToMany(Tag::class);
+    }
+
+    public function comments(): HasMany
+    {
+        return $this->hasMany(Comment::class)->latest();
     }
 }

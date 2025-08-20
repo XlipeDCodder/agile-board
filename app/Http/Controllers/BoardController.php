@@ -15,21 +15,23 @@ class BoardController extends Controller
 {
     public function show(Request $request): Response
     {
-        
         $columns = Column::orderBy('order')->get();
-       
+        
         $doneColumn = $columns->firstWhere('name', 'Feito');
         
+        // Carrega os itens para as colunas que não são "Feito"
         $columns->where('id', '!=', $doneColumn ? $doneColumn->id : 0)
             ->load(['items' => function ($query) {
-                $query->whereNull('parent_id')->with(['assignee', 'subtasks']);
+                $query->whereNull('parent_id')->with(['assignees', 'subtasks', 'comments.user']);
             }]);
         
+        // Carrega os itens para a coluna "Feito" com o filtro de tempo
         if ($doneColumn) {
             $doneColumn->load(['items' => function ($query) {
                 $query->whereNull('parent_id')
                       ->where('items.updated_at', '>=', now()->subMinutes(30)) 
-                      ->with(['assignee', 'subtasks']);
+                      // E AQUI TAMBÉM
+                      ->with(['assignees', 'subtasks', 'comments.user']);
             }]);
         }
 

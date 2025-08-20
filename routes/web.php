@@ -9,6 +9,7 @@ use App\Http\Controllers\BacklogController;
 use App\Http\Controllers\CompletedController;
 use App\Http\Controllers\ColumnController;
 use App\Http\Controllers\Admin\ColumnManagementController;
+use App\Http\Controllers\CommentController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
@@ -40,6 +41,7 @@ Route::middleware('auth')->group(function () {
     Route::post('/columns', [ColumnController::class, 'store'])->name('columns.store');
     Route::patch('/columns/reorder', [ColumnController::class, 'reorder'])->name('columns.reorder');
     Route::get('/admin/columns', [ColumnManagementController::class, 'index'])->name('admin.columns.index');
+    Route::post('/comments', [CommentController::class, 'store'])->name('comments.store');
 });
 
 require __DIR__.'/auth.php';

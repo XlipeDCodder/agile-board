@@ -4,6 +4,7 @@ import Modal from '@/Components/Modal.vue';
 import { Head, router, useForm } from '@inertiajs/vue3';
 import { ref, onMounted, watch } from 'vue';
 import draggable from 'vuedraggable';
+import Multiselect from 'vue-multiselect'; 
 
 const props = defineProps({
     columns: Array,
@@ -13,15 +14,21 @@ const props = defineProps({
 const boardColumns = ref([]);
 const showItemModal = ref(false);
 
+// Formulário principal, agora com 'assignee_ids' para múltiplos responsáveis
 const itemForm = useForm({
     id: null, title: '', description: '', type: 'task',
-    priority: 'Média', assignee_id: null, due_date: null,
-    column_id: null, estimation: null, subtasks: [],
+    priority: 'Média', assignee_ids: [], due_date: null,
+    column_id: null, estimation: null, subtasks: [], comments: [],
 });
 
 const newSubtaskForm = useForm({
     title: '',
     parent_id: null,
+});
+
+const newCommentForm = useForm({
+    body: '',
+    item_id: null,
 });
 
 onMounted(() => { boardColumns.value = props.columns; });
@@ -39,6 +46,8 @@ watch(() => props.columns, (newColumns) => {
         }
         if (updatedItem) {
             itemForm.subtasks = updatedItem.subtasks;
+            itemForm.comments = updatedItem.comments;
+            itemForm.assignee_ids = updatedItem.assignees.map(user => user.id);
         }
     }
 }, { deep: true });
@@ -49,17 +58,8 @@ function onDragEnd() {
 }
 
 const openCreateItemModal = (columnId) => {
-    itemForm.id = null;
-    itemForm.title = '';
-    itemForm.description = '';
-    itemForm.type = 'task';
-    itemForm.priority = 'Média';
-    itemForm.assignee_id = null;
-    itemForm.due_date = null;
-    itemForm.estimation = null;
-    itemForm.subtasks = [];
+    itemForm.reset();
     itemForm.column_id = columnId;
-    itemForm.clearErrors();
     showItemModal.value = true;
 };
 
@@ -69,12 +69,14 @@ const openEditItemModal = (item) => {
     itemForm.description = item.description;
     itemForm.type = item.type;
     itemForm.priority = item.priority;
-    itemForm.assignee_id = item.assignee_id;
+    itemForm.assignee_ids = item.assignees.map(user => user.id); // Mapeia para um array de IDs
     itemForm.due_date = item.due_date;
     itemForm.column_id = item.column_id;
     itemForm.estimation = item.estimation;
     itemForm.subtasks = item.subtasks;
+    itemForm.comments = item.comments;
     newSubtaskForm.parent_id = item.id;
+    newCommentForm.item_id = item.id;
     showItemModal.value = true;
 };
 
@@ -82,10 +84,11 @@ const closeModal = () => { showItemModal.value = false; };
 
 const saveItem = () => {
     if (itemForm.id) {
-        itemForm.put(route('items.update', itemForm.id), {
-            preserveScroll: true,
-            onSuccess: () => closeModal(),
-        });
+        itemForm.transform(data => ({ ...data, subtasks: undefined, comments: undefined }))
+            .put(route('items.update', itemForm.id), {
+                preserveScroll: true,
+                onSuccess: () => closeModal(),
+            });
     } else {
         itemForm.post(route('items.store'), {
             preserveScroll: true,
@@ -100,8 +103,16 @@ const addSubtask = () => {
         preserveState: true,
         onSuccess: () => {
             newSubtaskForm.reset('title');
-            closeModal();
+            
         },
+    });
+};
+
+const addComment = () => {
+    newCommentForm.post(route('comments.store'), {
+        preserveScroll: true,
+        preserveState: true,
+        onSuccess: () => newCommentForm.reset('body'),
     });
 };
 
@@ -114,6 +125,10 @@ const toggleSubtask = (subtask) => {
 
 const priorityClasses = (p) => ({ 'Baixa': 'bg-gray-400', 'Média': 'bg-yellow-500', 'Alta': 'bg-orange-500', 'Crítica': 'bg-red-600' }[p]);
 </script>
+
+<!-- Estilos para o vue-multiselect e para o tema dark -->
+<style src="vue-multiselect/dist/vue-multiselect.css"></style>
+
 
 <template>
     <Head title="Quadro Kanban" />
@@ -148,7 +163,13 @@ const priorityClasses = (p) => ({ 'Baixa': 'bg-gray-400', 'Média': 'bg-yellow-5
                                         <div class="mt-3 flex justify-between items-center border-t border-accent pt-2">
                                             <span class="text-xs text-text-secondary">#{{ item.id }}</span>
                                             <div v-if="item.estimation" class="text-xs font-bold bg-secondary text-text-primary rounded-full px-2 py-1">{{ item.estimation }} pts</div>
-                                            <span class="px-2 py-1 text-xs font-semibold text-white bg-blue-500 rounded-full">{{ item.assignee ? item.assignee.name : 'Não atribuído' }}</span>
+                                            <!-- Novo visual para múltiplos responsáveis -->
+                                            <div class="flex -space-x-2 overflow-hidden">
+                                                <div v-if="item.assignees.length === 0" class="inline-block h-6 w-6 rounded-full bg-gray-500 text-white flex items-center justify-center text-xs" title="Não atribuído">?</div>
+                                                <div v-for="assignee in item.assignees" :key="assignee.id" class="inline-block h-6 w-6 rounded-full ring-2 ring-secondary bg-blue-500 text-white flex items-center justify-center text-xs" :title="assignee.name">
+                                                    {{ assignee.name.charAt(0) }}
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
                                 </template>
@@ -164,40 +185,28 @@ const priorityClasses = (p) => ({ 'Baixa': 'bg-gray-400', 'Média': 'bg-yellow-5
                 <h2 class="text-2xl font-bold mb-4">{{ itemForm.id ? 'Editar Item' : 'Criar Novo Item' }}</h2>
                 <form @submit.prevent="saveItem">
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div class="md:col-span-2"><label class="block text-sm font-medium">Título</label><input type="text" v-model="itemForm.title" class="mt-1 block w-full rounded-md bg-primary border-accent text-text-primary shadow-sm"></div>
+                        <div class="md:col-span-2"><label class="block text-sm font-medium">Descrição</label><textarea v-model="itemForm.description" rows="3" class="mt-1 block w-full rounded-md bg-primary border-accent text-text-primary shadow-sm"></textarea></div>
+                        
                         <div class="md:col-span-2">
-                            <label class="block text-sm font-medium">Título</label>
-                            <input type="text" v-model="itemForm.title" class="mt-1 block w-full rounded-md bg-primary border-accent text-text-primary shadow-sm">
-                            <div v-if="itemForm.errors.title" class="text-red-500 text-xs">{{ itemForm.errors.title }}</div>
+                            <label class="block text-sm font-medium">Responsáveis</label>
+                            <Multiselect
+                                v-model="itemForm.assignee_ids"
+                                :options="users.map(user => user.id)"
+                                :custom-label="opt => users.find(user => user.id === opt).name"
+                                :multiple="true"
+                                placeholder="Selecione os responsáveis"
+                                selectLabel="Clique para selecionar"
+                                deselectLabel="Clique para remover"
+                                selectedLabel="Selecionado"
+                                class="mt-1"
+                            ></Multiselect>
                         </div>
-                        <div class="md:col-span-2">
-                            <label class="block text-sm font-medium">Descrição</label>
-                            <textarea v-model="itemForm.description" rows="3" class="mt-1 block w-full rounded-md bg-primary border-accent text-text-primary shadow-sm"></textarea>
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium">Responsável</label>
-                            <select v-model="itemForm.assignee_id" class="mt-1 block w-full rounded-md bg-primary border-accent text-text-primary shadow-sm">
-                                <option :value="null">Não atribuído</option>
-                                <option v-for="user in users" :key="user.id" :value="user.id">{{ user.name }}</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium">Prioridade</label>
-                            <select v-model="itemForm.priority" class="mt-1 block w-full rounded-md bg-primary border-accent text-text-primary shadow-sm">
-                                <option>Baixa</option><option>Média</option><option>Alta</option><option>Crítica</option>
-                            </select>
-                        </div>
-                        <div class="md:col-span-2">
-                            <label class="block text-sm font-medium">Estimativa</label>
-                            <select v-model="itemForm.estimation" class="mt-1 block w-full rounded-md bg-primary border-accent text-text-primary shadow-sm">
-                                <option :value="null">Não estimado</option>
-                                <option v-for="p in [1,2,3,5,8,13,20]" :value="p">{{p}} Pontos</option>
-                            </select>
-                        </div>
+
+                        <div><label class="block text-sm font-medium">Prioridade</label><select v-model="itemForm.priority" class="mt-1 block w-full rounded-md bg-primary border-accent text-text-primary shadow-sm"><option>Baixa</option><option>Média</option><option>Alta</option><option>Crítica</option></select></div>
+                        <div class="md:col-span-2"><label class="block text-sm font-medium">Estimativa</label><select v-model="itemForm.estimation" class="mt-1 block w-full rounded-md bg-primary border-accent text-text-primary shadow-sm"><option :value="null">Não estimado</option><option v-for="p in [1,2,3,5,8,13,20]" :value="p">{{p}} Pontos</option></select></div>
                     </div>
-                    <div class="mt-6 flex justify-end space-x-4">
-                        <button type="button" @click="closeModal" class="px-4 py-2 bg-accent text-primary rounded-md">Cancelar</button>
-                        <button type="submit" :disabled="itemForm.processing" class="px-4 py-2 bg-blue-600 text-white rounded-md">Salvar</button>
-                    </div>
+                    <div class="mt-6 flex justify-end space-x-4"><button type="button" @click="closeModal" class="px-4 py-2 bg-accent text-primary rounded-md">Cancelar</button><button type="submit" :disabled="itemForm.processing" class="px-4 py-2 bg-blue-600 text-white rounded-md">Salvar</button></div>
                 </form>
 
                 <div v-if="itemForm.id" class="mt-6 border-t border-accent pt-4">
@@ -212,6 +221,31 @@ const priorityClasses = (p) => ({ 'Baixa': 'bg-gray-400', 'Média': 'bg-yellow-5
                         <input type="text" v-model="newSubtaskForm.title" placeholder="Adicionar nova subtarefa..." class="flex-grow block w-full rounded-md bg-primary border-accent text-text-primary shadow-sm text-sm">
                         <button type="submit" :disabled="newSubtaskForm.processing" class="px-3 py-1.5 bg-green-500 text-white rounded-md text-sm">Adicionar</button>
                     </form>
+                </div>
+
+                <div v-if="itemForm.id" class="mt-6 border-t border-accent pt-4">
+                    <h3 class="text-lg font-bold mb-4">Comentários</h3>
+                    <form @submit.prevent="addComment" class="mb-4">
+                        <textarea v-model="newCommentForm.body" rows="3" placeholder="Adicionar um comentário..." class="w-full rounded-md bg-primary border-accent text-text-primary shadow-sm"></textarea>
+                        <div v-if="newCommentForm.errors.body" class="text-red-500 text-xs">{{ newCommentForm.errors.body }}</div>
+                        <button type="submit" :disabled="newCommentForm.processing" class="mt-2 px-4 py-2 bg-blue-600 text-white rounded-md text-sm">Comentar</button>
+                    </form>
+                    <div class="space-y-4 max-h-60 overflow-y-auto">
+                        <div v-for="comment in itemForm.comments" :key="comment.id" class="flex items-start space-x-3">
+                            <div class="flex-shrink-0">
+                                <span class="inline-flex items-center justify-center h-8 w-8 rounded-full bg-primary">
+                                    <span class="text-sm font-medium leading-none text-text-primary">{{ comment.user.name.charAt(0) }}</span>
+                                </span>
+                            </div>
+                            <div class="flex-1">
+                                <div class="bg-primary rounded-lg px-3 py-2">
+                                    <p class="text-sm font-semibold text-text-primary">{{ comment.user.name }}</p>
+                                    <p class="text-sm text-text-primary mt-1 whitespace-pre-wrap">{{ comment.body }}</p>
+                                </div>
+                                <span class="text-xs text-text-secondary mt-1">{{ new Date(comment.created_at).toLocaleString() }}</span>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </Modal>
