@@ -4,7 +4,7 @@ import Modal from '@/Components/Modal.vue';
 import { Head, router, useForm } from '@inertiajs/vue3';
 import { ref, onMounted, watch } from 'vue';
 import draggable from 'vuedraggable';
-import Multiselect from 'vue-multiselect'; 
+import Multiselect from 'vue-multiselect';
 
 const props = defineProps({
     columns: Array,
@@ -103,7 +103,7 @@ const addSubtask = () => {
         preserveState: true,
         onSuccess: () => {
             newSubtaskForm.reset('title');
-            
+
         },
     });
 };
@@ -187,7 +187,7 @@ const priorityClasses = (p) => ({ 'Baixa': 'bg-gray-400', 'Média': 'bg-yellow-5
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div class="md:col-span-2"><label class="block text-sm font-medium">Título</label><input type="text" v-model="itemForm.title" class="mt-1 block w-full rounded-md bg-primary border-accent text-text-primary shadow-sm"></div>
                         <div class="md:col-span-2"><label class="block text-sm font-medium">Descrição</label><textarea v-model="itemForm.description" rows="3" class="mt-1 block w-full rounded-md bg-primary border-accent text-text-primary shadow-sm"></textarea></div>
-                        
+
                         <div class="md:col-span-2">
                             <label class="block text-sm font-medium">Responsáveis</label>
                             <Multiselect
