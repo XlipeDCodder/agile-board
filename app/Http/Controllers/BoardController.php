@@ -22,7 +22,7 @@ class BoardController extends Controller
         // Carrega os itens para as colunas que não são "Feito"
         $columns->where('id', '!=', $doneColumn ? $doneColumn->id : 0)
             ->load(['items' => function ($query) {
-                $query->whereNull('parent_id')->with(['assignees', 'subtasks', 'comments.user']);
+                $query->whereNull('parent_id')->with(['assignees', 'subtasks', 'comments.user', 'comments.attachments']);
             }]);
         
         // Carrega os itens para a coluna "Feito" com o filtro de tempo
@@ -31,7 +31,7 @@ class BoardController extends Controller
                 $query->whereNull('parent_id')
                       ->where('items.updated_at', '>=', now()->subMinutes(30)) 
                       // E AQUI TAMBÉM
-                      ->with(['assignees', 'subtasks', 'comments.user']);
+                      ->with(['assignees', 'subtasks', 'comments.user', 'comments.attachments']);
             }]);
         }
 

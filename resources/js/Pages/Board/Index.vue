@@ -13,6 +13,7 @@ const props = defineProps({
 
 const boardColumns = ref([]);
 const showItemModal = ref(false);
+const expandedImage = ref(null);
 
 // Formulário principal, agora com 'assignee_ids' para múltiplos responsáveis
 const itemForm = useForm({
@@ -29,6 +30,7 @@ const newSubtaskForm = useForm({
 const newCommentForm = useForm({
     body: '',
     item_id: null,
+    files: [],
 });
 
 onMounted(() => { boardColumns.value = props.columns; });
@@ -112,7 +114,12 @@ const addComment = () => {
     newCommentForm.post(route('comments.store'), {
         preserveScroll: true,
         preserveState: true,
-        onSuccess: () => newCommentForm.reset('body'),
+        onSuccess: () => {
+            newCommentForm.reset('body', 'files');
+            // Limpa o input file manualmente se necessário, mas o reset deve cuidar do v-model se usarmos componente, 
+            // mas para input nativo precisamos limpar o valor
+            document.getElementById('comment-files').value = null;
+        },
     });
 };
 
@@ -228,6 +235,10 @@ const priorityClasses = (p) => ({ 'Baixa': 'bg-gray-400', 'Média': 'bg-yellow-5
                     <form @submit.prevent="addComment" class="mb-4">
                         <textarea v-model="newCommentForm.body" rows="3" placeholder="Adicionar um comentário..." class="w-full rounded-md bg-primary border-accent text-text-primary shadow-sm"></textarea>
                         <div v-if="newCommentForm.errors.body" class="text-red-500 text-xs">{{ newCommentForm.errors.body }}</div>
+                        <div class="mt-2">
+                            <label class="block text-sm font-medium text-text-secondary mb-1">Anexar arquivos</label>
+                            <input type="file" id="comment-files" @input="newCommentForm.files = $event.target.files" multiple class="block w-full text-sm text-text-secondary file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-text-primary hover:file:bg-secondary"/>
+                        </div>
                         <button type="submit" :disabled="newCommentForm.processing" class="mt-2 px-4 py-2 bg-blue-600 text-white rounded-md text-sm">Comentar</button>
                     </form>
                     <div class="space-y-4 max-h-60 overflow-y-auto">
@@ -241,12 +252,37 @@ const priorityClasses = (p) => ({ 'Baixa': 'bg-gray-400', 'Média': 'bg-yellow-5
                                 <div class="bg-primary rounded-lg px-3 py-2">
                                     <p class="text-sm font-semibold text-text-primary">{{ comment.user.name }}</p>
                                     <p class="text-sm text-text-primary mt-1 whitespace-pre-wrap">{{ comment.body }}</p>
+                                    
+                                    <div v-if="comment.attachments && comment.attachments.length > 0" class="mt-2 grid grid-cols-2 gap-2">
+                                        <div v-for="attachment in comment.attachments" :key="attachment.id" class="relative group">
+                                            <div v-if="attachment.mime_type && attachment.mime_type.startsWith('image/')" 
+                                                 class="cursor-pointer overflow-hidden rounded border border-accent hover:opacity-90 transition"
+                                                 @click="expandedImage = '/storage/' + attachment.file_path">
+                                                <img :src="'/storage/' + attachment.file_path" class="w-full h-24 object-cover">
+                                            </div>
+                                            <div v-else class="flex items-center p-2 rounded border border-accent bg-secondary hover:bg-primary transition">
+                                                <a :href="'/storage/' + attachment.file_path" download class="flex items-center space-x-2 w-full text-text-primary text-xs">
+                                                    <svg class="h-4 w-4 text-text-secondary" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                                                    <span class="truncate">{{ attachment.file_name }}</span>
+                                                </a>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
                                 <span class="text-xs text-text-secondary mt-1">{{ new Date(comment.created_at).toLocaleString() }}</span>
                             </div>
                         </div>
                     </div>
                 </div>
+            </div>
+        </Modal>
+
+        <Modal :show="!!expandedImage" @close="expandedImage = null">
+            <div class="p-2 bg-black flex justify-center items-center h-full relative" @click="expandedImage = null">
+                <img :src="expandedImage" class="max-w-full max-h-screen object-contain text-white">
+                <button class="absolute top-4 right-4 text-white hover:text-gray-300" @click.stop="expandedImage = null">
+                    <svg class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                </button>
             </div>
         </Modal>
     </AuthenticatedLayout>

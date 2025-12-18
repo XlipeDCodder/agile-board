@@ -16,13 +16,27 @@ class CommentController extends Controller
         $validated = $request->validate([
             'item_id' => 'required|exists:items,id',
             'body' => 'required|string',
+            'files.*' => 'file|max:10240', // 10MB max
         ]);
 
-        Comment::create([
+        $comment = Comment::create([
             'item_id' => $validated['item_id'],
             'body' => $validated['body'],
             'user_id' => Auth::id(),
         ]);
+
+        if ($request->hasFile('files')) {
+            foreach ($request->file('files') as $file) {
+                $path = $file->store('attachments', 'public');
+                
+                $comment->attachments()->create([
+                    'file_path' => $path,
+                    'file_name' => $file->getClientOriginalName(),
+                    'mime_type' => $file->getMimeType(),
+                    'size' => $file->getSize(),
+                ]);
+            }
+        }
 
         return back(303);
     }
