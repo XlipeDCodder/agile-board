@@ -131,6 +131,9 @@ const toggleSubtask = (subtask) => {
 };
 
 const priorityClasses = (p) => ({ 'Baixa': 'bg-gray-400', 'Média': 'bg-yellow-500', 'Alta': 'bg-orange-500', 'Crítica': 'bg-red-600' }[p]);
+
+const isBug = (item) => item.type === 'bug';
+
 </script>
 
 <!-- Estilos para o vue-multiselect e para o tema dark -->
@@ -161,7 +164,15 @@ const priorityClasses = (p) => ({ 'Baixa': 'bg-gray-400', 'Média': 'bg-yellow-5
                                     <div @click="openEditItemModal(item)" class="bg-primary p-3 rounded-md shadow cursor-pointer">
                                         <div class="flex justify-between items-start">
                                             <h3 class="font-bold text-text-primary">{{ item.title }}</h3>
-                                            <span class="w-3 h-3 rounded-full flex-shrink-0" :class="priorityClasses(item.priority)"></span>
+                                            <div class="flex items-center space-x-2 flex-shrink-0">
+                                                <span v-if="isBug(item)" class="text-red-500" title="Bug">
+                                                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+                                                </span>
+                                                <span v-else class="text-blue-500" title="Tarefa">
+                                                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                                                </span>
+                                                <span class="w-3 h-3 rounded-full" :class="priorityClasses(item.priority)"></span>
+                                            </div>
                                         </div>
                                         <p class="text-sm text-text-secondary mt-2">{{ item.description }}</p>
                                         <div v-if="item.subtasks && item.subtasks.length > 0" class="mt-3 border-t border-accent pt-2 text-xs text-text-secondary italic">
@@ -211,6 +222,7 @@ const priorityClasses = (p) => ({ 'Baixa': 'bg-gray-400', 'Média': 'bg-yellow-5
                         </div>
 
                         <div><label class="block text-sm font-medium">Prioridade</label><select v-model="itemForm.priority" class="mt-1 block w-full rounded-md bg-primary border-accent text-text-primary shadow-sm"><option>Baixa</option><option>Média</option><option>Alta</option><option>Crítica</option></select></div>
+                        <div><label class="block text-sm font-medium">Tipo</label><select v-model="itemForm.type" class="mt-1 block w-full rounded-md bg-primary border-accent text-text-primary shadow-sm"><option value="task">Tarefa</option><option value="bug">Bug</option></select></div>
                         <div class="md:col-span-2"><label class="block text-sm font-medium">Estimativa</label><select v-model="itemForm.estimation" class="mt-1 block w-full rounded-md bg-primary border-accent text-text-primary shadow-sm"><option :value="null">Não estimado</option><option v-for="p in [1,2,3,5,8,13,20]" :value="p">{{p}} Pontos</option></select></div>
                     </div>
                     <div class="mt-6 flex justify-end space-x-4"><button type="button" @click="closeModal" class="px-4 py-2 bg-accent text-primary rounded-md">Cancelar</button><button type="submit" :disabled="itemForm.processing" class="px-4 py-2 bg-blue-600 text-white rounded-md">Salvar</button></div>

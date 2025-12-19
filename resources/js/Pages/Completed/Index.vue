@@ -96,6 +96,8 @@ const addComment = () => {
         }
     });
 };
+
+const isBug = (item) => item.type === 'bug';
 </script>
 
 <template>
@@ -123,7 +125,17 @@ const addComment = () => {
                             <tbody class="bg-secondary divide-y divide-accent">
                                 <tr v-for="item in items.data" :key="item.id" @click="openEditItemModal(item)" class="hover:bg-primary cursor-pointer">
                                     <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-text-primary">#{{ item.id }}</td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-text-primary">{{ item.title }}</td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-text-primary">
+                                        <div class="flex items-center space-x-2">
+                                            <span v-if="isBug(item)" class="text-red-500" title="Bug">
+                                                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+                                            </span>
+                                            <span v-else class="text-blue-500" title="Tarefa">
+                                                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                                            </span>
+                                            <span>{{ item.title }}</span>
+                                        </div>
+                                    </td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-text-secondary">{{ item.assignees.map(u => u.name).join(', ') || 'N/A' }}</td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-text-secondary">{{ item.priority }}</td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-text-secondary">{{ new Date(item.updated_at).toLocaleDateString() }}</td>
@@ -165,6 +177,7 @@ const addComment = () => {
                         </div>
 
                         <div><label class="block text-sm font-medium">Prioridade</label><select v-model="itemForm.priority" class="mt-1 block w-full rounded-md bg-primary border-accent text-text-primary shadow-sm"><option>Baixa</option><option>Média</option><option>Alta</option><option>Crítica</option></select></div>
+                        <div><label class="block text-sm font-medium">Tipo</label><select v-model="itemForm.type" class="mt-1 block w-full rounded-md bg-primary border-accent text-text-primary shadow-sm"><option value="task">Tarefa</option><option value="bug">Bug</option></select></div>
                         <div class="md:col-span-2"><label class="block text-sm font-medium">Estimativa</label><select v-model="itemForm.estimation" class="mt-1 block w-full rounded-md bg-primary border-accent text-text-primary shadow-sm"><option :value="null">Não estimado</option><option v-for="p in [1,2,3,5,8,13,20]" :value="p">{{p}} Pontos</option></select></div>
                     </div>
                     <div class="mt-6 flex justify-end space-x-4"><button type="button" @click="closeModal" class="px-4 py-2 bg-accent text-primary rounded-md">Cancelar</button><button type="submit" :disabled="itemForm.processing" class="px-4 py-2 bg-blue-600 text-white rounded-md">Salvar</button></div>
