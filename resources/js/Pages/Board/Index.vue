@@ -136,6 +136,21 @@ const priorityClasses = (p) => ({ 'Baixa': 'bg-gray-400', 'Média': 'bg-yellow-5
 
 const isBug = (item) => item.type === 'bug';
 
+const formatDate = (dateString) => {
+    if (!dateString) return '';
+    const [year, month, day] = dateString.split('-');
+    return new Date(year, month - 1, day).toLocaleDateString();
+};
+
+const isOverdue = (dateString) => {
+    if (!dateString) return false;
+    const [year, month, day] = dateString.split('-');
+    const due = new Date(year, month - 1, day);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return due < today;
+};
+
 </script>
 
 <!-- Estilos para o vue-multiselect e para o tema dark -->
@@ -178,10 +193,10 @@ const isBug = (item) => item.type === 'bug';
                                         </div>
                                         <div v-if="item.project" class="mt-1">
                                             <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-indigo-100 text-indigo-800"
-                                                  :class="{'bg-red-100 text-red-800': item.project.due_date && new Date(item.project.due_date) < new Date()}">
+                                                  :class="{'bg-red-100 text-red-800': isOverdue(item.project.due_date)}">
                                                 {{ item.project.name }}
                                                 <span v-if="!item.due_date && item.project.due_date" class="ml-1 text-xxs opacity-75">
-                                                    ({{ new Date(item.project.due_date).toLocaleDateString() }})
+                                                    ({{ formatDate(item.project.due_date) }})
                                                 </span>
                                             </span>
                                         </div>

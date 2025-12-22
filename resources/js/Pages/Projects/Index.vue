@@ -49,6 +49,21 @@ const saveProject = () => {
     }
 };
 
+const formatDate = (dateString) => {
+    if (!dateString) return 'N/A';
+    const [year, month, day] = dateString.split('-');
+    return new Date(year, month - 1, day).toLocaleDateString();
+};
+
+const isOverdue = (dateString) => {
+    if (!dateString) return false;
+    const [year, month, day] = dateString.split('-');
+    const due = new Date(year, month - 1, day);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return due < today;
+};
+
 const deleteProject = (id) => {
     if (confirm('Tem certeza que deseja excluir este projeto?')) {
         router.delete(route('projects.destroy', id));
@@ -91,8 +106,8 @@ const deleteProject = (id) => {
                             <div class="flex justify-between items-center text-xs text-text-secondary border-t border-accent pt-4">
                                 <div>
                                     <span class="font-bold">Vencimento:</span>
-                                    <span :class="{'text-red-500 font-bold': project.due_date && new Date(project.due_date) < new Date(), 'ml-1': true}">
-                                        {{ project.due_date ? new Date(project.due_date).toLocaleDateString() : 'N/A' }}
+                                    <span :class="{'text-red-500 font-bold': isOverdue(project.due_date), 'ml-1': true}">
+                                        {{ formatDate(project.due_date) }}
                                     </span>
                                 </div>
                                 <div>
