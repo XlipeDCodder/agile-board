@@ -9,6 +9,7 @@ use Inertia\Response;
 use App\Models\User;
 
 use App\Models\Item;
+use App\Models\Project;
 
 class DashboardController extends Controller
 {
@@ -54,12 +55,19 @@ class DashboardController extends Controller
         // Obtém todos os usuários para o dropdown de atribuição
         $allUsers = User::orderBy('name')->get();
 
+        // Obtém estatísticas de projetos
+        $totalProjects = Project::count();
+        $overdueProjects = Project::where('due_date', '<', now()->startOfDay())->count();
+
+
         return Inertia::render('Dashboard', [
             'columns' => $columns,
             'users' => $activeUsers,
             'idleUsers' => $idleUsers,
             'unassignedItems' => $unassignedItems,
             'allUsers' => $allUsers,
+            'totalProjects' => $totalProjects,
+            'overdueProjects' => $overdueProjects,
         ]);
     }
 }

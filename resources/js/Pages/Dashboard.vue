@@ -3,6 +3,7 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import { Head } from '@inertiajs/vue3';
 import PieChart from '@/Components/PieChart.vue';
 import Modal from '@/Components/Modal.vue';
+import BarChart from '@/Components/BarChart.vue';
 import { computed, ref } from 'vue';
 import { useForm } from '@inertiajs/vue3';
 import Multiselect from 'vue-multiselect';
@@ -14,6 +15,8 @@ const props = defineProps({
     idleUsers: Array,
     unassignedItems: Array,
     allUsers: Array,
+    totalProjects: Number,
+    overdueProjects: Number,
 });
 
 const selectedUser = ref(null);
@@ -79,6 +82,42 @@ const chartData = computed(() => {
         ]
     }
 });
+
+const projectsChartData = computed(() => ({
+    labels: ['Projetos'],
+    datasets: [{
+        label: 'Total de Projetos',
+        backgroundColor: '#3B82F6', // Blue
+        data: [props.totalProjects]
+    }]
+}));
+
+const overdueProjectsChartData = computed(() => ({
+    labels: ['Atrasados'],
+    datasets: [{
+        label: 'Projetos Vencidos',
+        backgroundColor: '#EF4444', // Red
+        data: [props.overdueProjects]
+    }]
+}));
+
+const chartOptions = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+        legend: { display: false }, // Hide legend since it's redundant for single bar
+        title: {
+            display: true,
+            text: 'Quantidade'
+        }
+    },
+    scales: {
+        y: {
+            beginAtZero: true,
+            ticks: { stepSize: 1 }
+        }
+    }
+};
 </script>
 
 <template>
@@ -99,6 +138,22 @@ const chartData = computed(() => {
                     class="overflow-hidden bg-white shadow-sm sm:rounded-lg"
                 >
                     <div class="p-6 text-gray-900">
+                        <h3 class="text-lg font-medium text-text-primary mb-4">Visão Geral de Projetos</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8 border-b border-accent pb-6">
+                            <div class="bg-primary p-4 rounded-lg shadow border border-accent">
+                                <h4 class="text-sm font-bold text-text-secondary mb-2 text-center">Total de Projetos</h4>
+                                <div class="h-48">
+                                    <BarChart :data="projectsChartData" :options="chartOptions" />
+                                </div>
+                            </div>
+                            <div class="bg-primary p-4 rounded-lg shadow border border-accent">
+                                <h4 class="text-sm font-bold text-text-secondary mb-2 text-center">Projetos em Atraso</h4>
+                                <div class="h-48">
+                                    <BarChart :data="overdueProjectsChartData" :options="chartOptions" />
+                                </div>
+                            </div>
+                        </div>
+
                         <h3 class="text-lg font-medium text-text-primary mb-4" v-if="unassignedItems && unassignedItems.length > 0">Cards Sem Responsável</h3>
                         <div v-if="unassignedItems && unassignedItems.length > 0" class="flex overflow-x-auto space-x-4 pb-4 mb-4 border-b border-accent scrollbar-thin scrollbar-thumb-accent scrollbar-track-secondary">
                             <div 
