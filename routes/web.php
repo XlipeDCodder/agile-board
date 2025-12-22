@@ -45,6 +45,7 @@ Route::middleware('auth')->group(function () {
     Route::patch('/columns/reorder', [ColumnController::class, 'reorder'])->name('columns.reorder');
     Route::get('/admin/columns', [ColumnManagementController::class, 'index'])->name('admin.columns.index');
     Route::post('/comments', [CommentController::class, 'store'])->name('comments.store');
+    Route::resource('projects', \App\Http\Controllers\ProjectController::class)->only(['index', 'store', 'update', 'destroy']);
 });
 
 require __DIR__.'/auth.php';

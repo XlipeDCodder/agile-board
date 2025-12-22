@@ -21,6 +21,7 @@ class ItemController extends Controller
             'priority' => 'required|in:Baixa,Média,Alta,Crítica',
             'due_date' => 'nullable|date',
             'column_id' => 'required|exists:columns,id',
+            'project_id' => 'nullable|exists:projects,id',
             'estimation' => 'nullable|numeric|min:0|max:20',
             // 1. A validação agora espera um array de IDs de responsáveis
             'assignee_ids' => 'nullable|array',
@@ -61,6 +62,7 @@ class ItemController extends Controller
             'priority' => 'required|in:Baixa,Média,Alta,Crítica',
             'due_date' => 'nullable|date',
             'column_id' => 'required|exists:columns,id',
+            'project_id' => 'nullable|exists:projects,id',
             'estimation' => 'nullable|numeric|min:0|max:20',
             'assignee_ids' => 'nullable|array',
             'assignee_ids.*' => 'integer|exists:users,id',

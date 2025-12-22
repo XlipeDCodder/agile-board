@@ -20,6 +20,7 @@ class Item extends Model
     protected $fillable = [
         'parent_id',
         'column_id',
+        'project_id',
         'creator_id',
         // 'assignee_id' foi removido daqui
         'title',
@@ -85,5 +86,10 @@ class Item extends Model
     public function comments(): HasMany
     {
         return $this->hasMany(Comment::class)->latest();
+    }
+
+    public function project(): BelongsTo
+    {
+        return $this->belongsTo(Project::class);
     }
 }

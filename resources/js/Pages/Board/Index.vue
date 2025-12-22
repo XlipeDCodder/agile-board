@@ -9,6 +9,7 @@ import Multiselect from 'vue-multiselect';
 const props = defineProps({
     columns: Array,
     users: Array,
+    projects: Array,
 });
 
 const boardColumns = ref([]);
@@ -19,7 +20,7 @@ const expandedImage = ref(null);
 const itemForm = useForm({
     id: null, title: '', description: '', type: 'task',
     priority: 'Média', assignee_ids: [], due_date: null,
-    column_id: null, estimation: null, subtasks: [], comments: [],
+    column_id: null, project_id: null, estimation: null, subtasks: [], comments: [],
 });
 
 const newSubtaskForm = useForm({
@@ -74,6 +75,7 @@ const openEditItemModal = (item) => {
     itemForm.assignee_ids = item.assignees.map(user => user.id); // Mapeia para um array de IDs
     itemForm.due_date = item.due_date;
     itemForm.column_id = item.column_id;
+    itemForm.project_id = item.project_id;
     itemForm.estimation = item.estimation;
     itemForm.subtasks = item.subtasks;
     itemForm.comments = item.comments;
@@ -174,6 +176,15 @@ const isBug = (item) => item.type === 'bug';
                                                 <span class="w-3 h-3 rounded-full" :class="priorityClasses(item.priority)"></span>
                                             </div>
                                         </div>
+                                        <div v-if="item.project" class="mt-1">
+                                            <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-indigo-100 text-indigo-800"
+                                                  :class="{'bg-red-100 text-red-800': item.project.due_date && new Date(item.project.due_date) < new Date()}">
+                                                {{ item.project.name }}
+                                                <span v-if="!item.due_date && item.project.due_date" class="ml-1 text-xxs opacity-75">
+                                                    ({{ new Date(item.project.due_date).toLocaleDateString() }})
+                                                </span>
+                                            </span>
+                                        </div>
                                         <p class="text-sm text-text-secondary mt-2">{{ item.description }}</p>
                                         <div v-if="item.subtasks && item.subtasks.length > 0" class="mt-3 border-t border-accent pt-2 text-xs text-text-secondary italic">
                                             Existem subtarefas, clique para exibir
@@ -223,6 +234,13 @@ const isBug = (item) => item.type === 'bug';
 
                         <div><label class="block text-sm font-medium">Prioridade</label><select v-model="itemForm.priority" class="mt-1 block w-full rounded-md bg-primary border-accent text-text-primary shadow-sm"><option>Baixa</option><option>Média</option><option>Alta</option><option>Crítica</option></select></div>
                         <div><label class="block text-sm font-medium">Tipo</label><select v-model="itemForm.type" class="mt-1 block w-full rounded-md bg-primary border-accent text-text-primary shadow-sm"><option value="task">Tarefa</option><option value="bug">Bug</option></select></div>
+                        <div class="md:col-span-2">
+                            <label class="block text-sm font-medium">Projeto</label>
+                            <select v-model="itemForm.project_id" class="mt-1 block w-full rounded-md bg-primary border-accent text-text-primary shadow-sm">
+                                <option :value="null">Sem Projeto</option>
+                                <option v-for="proj in projects" :key="proj.id" :value="proj.id">{{ proj.name }}</option>
+                            </select>
+                        </div>
                         <div class="md:col-span-2"><label class="block text-sm font-medium">Estimativa</label><select v-model="itemForm.estimation" class="mt-1 block w-full rounded-md bg-primary border-accent text-text-primary shadow-sm"><option :value="null">Não estimado</option><option v-for="p in [1,2,3,5,8,13,20]" :value="p">{{p}} Pontos</option></select></div>
                     </div>
                     <div class="mt-6 flex justify-end space-x-4"><button type="button" @click="closeModal" class="px-4 py-2 bg-accent text-primary rounded-md">Cancelar</button><button type="submit" :disabled="itemForm.processing" class="px-4 py-2 bg-blue-600 text-white rounded-md">Salvar</button></div>
