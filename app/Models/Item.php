@@ -92,4 +92,9 @@ class Item extends Model
     {
         return $this->belongsTo(Project::class);
     }
+
+    public function timeEntries(): HasMany
+    {
+        return $this->hasMany(TimeEntry::class);
+    }
 }

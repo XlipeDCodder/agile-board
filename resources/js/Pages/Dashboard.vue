@@ -17,6 +17,7 @@ const props = defineProps({
     allUsers: Array,
     totalProjects: Number,
     overdueProjects: Number,
+    leaderboard: Array,
 });
 
 const selectedUser = ref(null);
@@ -118,6 +119,20 @@ const chartOptions = {
         }
     }
 };
+
+const getRankIcon = (index) => {
+    if (index === 0) return '🥇';
+    if (index === 1) return '🥈';
+    if (index === 2) return '🥉';
+    return `#${index + 1}`;
+};
+
+const getRankColor = (index) => {
+    if (index === 0) return 'text-yellow-500';
+    if (index === 1) return 'text-gray-400';
+    if (index === 2) return 'text-amber-700';
+    return 'text-text-secondary';
+};
 </script>
 
 <template>
@@ -151,6 +166,43 @@ const chartOptions = {
                                 <div class="h-48">
                                     <BarChart :data="overdueProjectsChartData" :options="chartOptions" />
                                 </div>
+                            </div>
+                        </div>
+
+                        <h3 class="text-lg font-medium text-text-primary mb-4" v-if="leaderboard && leaderboard.length > 0">Ranking de Entregas</h3>
+                        <div v-if="leaderboard && leaderboard.length > 0" class="mb-8 border-b border-accent pb-6">
+                            <div class="bg-primary rounded-lg shadow border border-accent overflow-hidden">
+                                <table class="min-w-full divide-y divide-accent">
+                                    <thead class="bg-secondary">
+                                        <tr>
+                                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">Posição</th>
+                                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">Usuário</th>
+                                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">Entregas</th>
+                                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">Pontos Totais</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="bg-primary divide-y divide-accent">
+                                        <tr v-for="(user, index) in leaderboard" :key="user.id">
+                                            <td class="px-6 py-4 whitespace-nowrap">
+                                                <div class="text-xl font-bold" :class="getRankColor(index)">{{ getRankIcon(index) }}</div>
+                                            </td>
+                                            <td class="px-6 py-4 whitespace-nowrap">
+                                                <div class="flex items-center">
+                                                    <div class="h-8 w-8 rounded-full bg-secondary flex items-center justify-center border border-accent mr-3">
+                                                        <span class="text-sm font-bold text-text-primary">{{ user.name.charAt(0) }}</span>
+                                                    </div>
+                                                    <div class="text-sm font-medium text-text-primary">{{ user.name }}</div>
+                                                </div>
+                                            </td>
+                                            <td class="px-6 py-4 whitespace-nowrap">
+                                                <div class="text-sm text-text-primary font-bold">{{ user.assigned_items_count }} cards</div>
+                                            </td>
+                                            <td class="px-6 py-4 whitespace-nowrap">
+                                                <div class="text-sm text-text-secondary">{{ user.assigned_items_sum_estimation || 0 }} pts</div>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
                             </div>
                         </div>
 

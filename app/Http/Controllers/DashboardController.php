@@ -59,6 +59,22 @@ class DashboardController extends Controller
         $totalProjects = Project::count();
         $overdueProjects = Project::where('due_date', '<', now()->startOfDay())->count();
 
+        // Ranking de Entregas (Gamification)
+        $leaderboard = User::withCount(['assignedItems' => function ($query) {
+            $query->whereHas('column', function ($q) {
+                $q->where('name', 'Feito');
+            });
+        }])
+        ->withSum(['assignedItems' => function ($query) {
+            $query->whereHas('column', function ($q) {
+                $q->where('name', 'Feito');
+            });
+        }], 'estimation')
+        ->orderByDesc('assigned_items_count')
+        ->orderByDesc('assigned_items_sum_estimation') // Desempate por pontos
+        ->take(5) // Top 5
+        ->get();
+
 
         return Inertia::render('Dashboard', [
             'columns' => $columns,
@@ -68,6 +84,7 @@ class DashboardController extends Controller
             'allUsers' => $allUsers,
             'totalProjects' => $totalProjects,
             'overdueProjects' => $overdueProjects,
+            'leaderboard' => $leaderboard,
         ]);
     }
 }
