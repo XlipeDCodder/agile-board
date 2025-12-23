@@ -12,4 +12,9 @@ class Project extends Model
     {
         return $this->hasMany(Item::class);
     }
+
+    public function timeEntries()
+    {
+        return $this->hasManyThrough(TimeEntry::class, Item::class);
+    }
 }

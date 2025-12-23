@@ -18,6 +18,8 @@ const props = defineProps({
     totalProjects: Number,
     overdueProjects: Number,
     leaderboard: Array,
+    projectTimeGlobal: Array,
+    projectTimeUser: Array,
 });
 
 const selectedUser = ref(null);
@@ -102,6 +104,25 @@ const overdueProjectsChartData = computed(() => ({
     }]
 }));
 
+// Time Metrics Charts
+const globalTimeChartData = computed(() => ({
+    labels: props.projectTimeGlobal.map(p => p.name),
+    datasets: [{
+        label: 'Horas Totais',
+        backgroundColor: '#10B981', // Emerald
+        data: props.projectTimeGlobal.map(p => parseFloat((p.time_entries_sum_minutes / 60).toFixed(1)))
+    }]
+}));
+
+const userTimeChartData = computed(() => ({
+    labels: props.projectTimeUser.map(p => p.name),
+    datasets: [{
+        label: 'Minhas Horas',
+        backgroundColor: '#8B5CF6', // Violet
+        data: props.projectTimeUser.map(p => parseFloat((p.time_entries_sum_minutes / 60).toFixed(1)))
+    }]
+}));
+
 const chartOptions = {
     responsive: true,
     maintainAspectRatio: false,
@@ -165,6 +186,22 @@ const getRankColor = (index) => {
                                 <h4 class="text-sm font-bold text-text-secondary mb-2 text-center">Projetos em Atraso</h4>
                                 <div class="h-48">
                                     <BarChart :data="overdueProjectsChartData" :options="chartOptions" />
+                                </div>
+                            </div>
+                        </div>
+
+                        <h3 class="text-lg font-medium text-text-primary mb-4" v-if="projectTimeGlobal && projectTimeGlobal.length > 0">Apontamento de Horas por Projeto</h3>
+                        <div v-if="projectTimeGlobal && projectTimeGlobal.length > 0" class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8 border-b border-accent pb-6">
+                            <div class="bg-primary p-4 rounded-lg shadow border border-accent">
+                                <h4 class="text-sm font-bold text-text-secondary mb-2 text-center">Horas Totais (Equipe)</h4>
+                                <div class="h-64">
+                                    <BarChart :data="globalTimeChartData" :options="{...chartOptions, plugins: { ...chartOptions.plugins, title: { display: false } } }" />
+                                </div>
+                            </div>
+                            <div class="bg-primary p-4 rounded-lg shadow border border-accent">
+                                <h4 class="text-sm font-bold text-text-secondary mb-2 text-center">Minhas Horas</h4>
+                                <div class="h-64">
+                                    <BarChart :data="userTimeChartData" :options="{...chartOptions, plugins: { ...chartOptions.plugins, title: { display: false } } }" />
                                 </div>
                             </div>
                         </div>

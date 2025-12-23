@@ -73,7 +73,16 @@ class DashboardController extends Controller
         ->orderByDesc('assigned_items_count')
         ->orderByDesc('assigned_items_sum_estimation') // Desempate por pontos
         ->take(5) // Top 5
+        ->orderByDesc('assigned_items_sum_estimation') // Desempate por pontos
+        ->take(5) // Top 5
         ->get();
+
+        // Project Time Metrics
+        $projectTimeGlobal = Project::withSum('timeEntries', 'minutes')->get();
+        
+        $projectTimeUser = Project::withSum(['timeEntries' => function($query) {
+            $query->where('user_id', \Illuminate\Support\Facades\Auth::id());
+        }], 'minutes')->get();
 
 
         return Inertia::render('Dashboard', [
@@ -84,7 +93,10 @@ class DashboardController extends Controller
             'allUsers' => $allUsers,
             'totalProjects' => $totalProjects,
             'overdueProjects' => $overdueProjects,
+            'overdueProjects' => $overdueProjects,
             'leaderboard' => $leaderboard,
+            'projectTimeGlobal' => $projectTimeGlobal,
+            'projectTimeUser' => $projectTimeUser,
         ]);
     }
 }
