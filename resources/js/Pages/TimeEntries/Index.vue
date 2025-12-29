@@ -97,6 +97,14 @@ const cancelEdit = () => {
     form.clearErrors();
 };
 
+const prevMonth = () => {
+    currentDate.value = new Date(currentDate.value.getFullYear(), currentDate.value.getMonth() - 1, 1);
+};
+
+const nextMonth = () => {
+    currentDate.value = new Date(currentDate.value.getFullYear(), currentDate.value.getMonth() + 1, 1);
+};
+
 const submit = () => {
     if (isEditing.value) {
         form.put(route('time-entries.update', editingEntryId.value), {
