@@ -15,11 +15,13 @@ const form = useForm({
     name: '',
     description: '',
     due_date: '',
+    status: 'open',
 });
 
 const openCreateModal = () => {
     isEditing.value = false;
     form.reset();
+    form.status = 'open';
     showModal.value = true;
 };
 
@@ -29,7 +31,22 @@ const openEditModal = (project) => {
     form.name = project.name;
     form.description = project.description;
     form.due_date = project.due_date;
+    form.status = project.status;
     showModal.value = true;
+};
+
+const toggleStatus = (project) => {
+    const newStatus = project.status === 'open' ? 'completed' : 'open';
+    form.id = project.id;
+    form.name = project.name;
+    form.description = project.description;
+    form.due_date = project.due_date;
+    form.status = newStatus;
+    
+    form.put(route('projects.update', project.id), {
+        preserveScroll: true,
+        onSuccess: () => form.reset(),
+    });
 };
 
 const closeModal = () => {
@@ -88,11 +105,20 @@ const deleteProject = (id) => {
         <div class="py-12">
             <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    <div v-for="project in projects" :key="project.id" class="bg-secondary overflow-hidden shadow-sm rounded-lg border border-accent">
+                    <div v-for="project in projects" :key="project.id" class="bg-secondary overflow-hidden shadow-sm rounded-lg border border-accent transition-all duration-300" :class="{'opacity-75 bg-gray-100': project.status === 'completed'}">
                         <div class="p-6">
                             <div class="flex justify-between items-start mb-4">
-                                <h3 class="text-lg font-bold text-text-primary">{{ project.name }}</h3>
+                                <div class="flex items-center gap-2">
+                                    <h3 class="text-lg font-bold text-text-primary" :class="{'line-through text-text-secondary': project.status === 'completed'}">{{ project.name }}</h3>
+                                    <span v-if="project.status === 'completed'" class="px-2 py-0.5 rounded-full bg-green-100 text-green-800 text-xs font-bold border border-green-200">
+                                        Concluído
+                                    </span>
+                                </div>
                                 <div class="flex space-x-2">
+                                    <button @click="toggleStatus(project)" class="text-green-500 hover:text-green-600" :title="project.status === 'open' ? 'Concluir' : 'Reabrir'">
+                                        <svg v-if="project.status === 'open'" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                                        <svg v-else class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                                    </button>
                                     <button @click="openEditModal(project)" class="text-blue-500 hover:text-blue-400">
                                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
                                     </button>
@@ -106,7 +132,7 @@ const deleteProject = (id) => {
                             <div class="flex justify-between items-center text-xs text-text-secondary border-t border-accent pt-4">
                                 <div>
                                     <span class="font-bold">Vencimento:</span>
-                                    <span :class="{'text-red-500 font-bold': isOverdue(project.due_date), 'ml-1': true}">
+                                    <span :class="{'text-red-500 font-bold': isOverdue(project.due_date) && project.status !== 'completed', 'ml-1': true}">
                                         {{ formatDate(project.due_date) }}
                                     </span>
                                 </div>

@@ -34,6 +34,7 @@ class ProjectController extends Controller
             'name' => 'required|string|max:255',
             'description' => 'nullable|string',
             'due_date' => 'nullable|date',
+            'status' => 'nullable|string|in:open,completed',
         ]);
 
         $project->update($validated);
