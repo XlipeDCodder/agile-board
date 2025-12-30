@@ -57,7 +57,9 @@ class DashboardController extends Controller
 
         // Obtém estatísticas de projetos
         $totalProjects = Project::count();
-        $overdueProjects = Project::where('due_date', '<', now()->startOfDay())->count();
+        $overdueProjects = Project::where('due_date', '<', now()->startOfDay())
+            ->where('status', '!=', 'completed')
+            ->count();
 
         // Ranking de Entregas (Gamification)
         $leaderboard = User::withCount(['assignedItems' => function ($query) {
@@ -92,7 +94,7 @@ class DashboardController extends Controller
             'unassignedItems' => $unassignedItems,
             'allUsers' => $allUsers,
             'totalProjects' => $totalProjects,
-            'overdueProjects' => $overdueProjects,
+            'totalProjects' => $totalProjects,
             'overdueProjects' => $overdueProjects,
             'leaderboard' => $leaderboard,
             'projectTimeGlobal' => $projectTimeGlobal,
