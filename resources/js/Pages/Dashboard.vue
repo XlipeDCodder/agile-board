@@ -17,6 +17,7 @@ const props = defineProps({
     allUsers: Array,
     totalProjects: Number,
     overdueProjects: Number,
+    completedProjects: Number,
     leaderboard: Array,
     projectTimeGlobal: Array,
     projectTimeUser: Array,
@@ -104,6 +105,15 @@ const overdueProjectsChartData = computed(() => ({
     }]
 }));
 
+const completedProjectsChartData = computed(() => ({
+    labels: ['Concluídos'],
+    datasets: [{
+        label: 'Projetos Concluídos',
+        backgroundColor: '#10B981', // Emerald Green
+        data: [props.completedProjects]
+    }]
+}));
+
 // Time Metrics Charts
 const globalTimeChartData = computed(() => ({
     labels: props.projectTimeGlobal.map(p => p.name),
@@ -175,11 +185,17 @@ const getRankColor = (index) => {
                 >
                     <div class="p-6 text-gray-900">
                         <h3 class="text-lg font-medium text-text-primary mb-4">Visão Geral de Projetos</h3>
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8 border-b border-accent pb-6">
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8 border-b border-accent pb-6">
                             <div class="bg-primary p-4 rounded-lg shadow border border-accent">
                                 <h4 class="text-sm font-bold text-text-secondary mb-2 text-center">Total de Projetos</h4>
                                 <div class="h-48">
                                     <BarChart :data="projectsChartData" :options="chartOptions" />
+                                </div>
+                            </div>
+                            <div class="bg-primary p-4 rounded-lg shadow border border-accent">
+                                <h4 class="text-sm font-bold text-text-secondary mb-2 text-center">Projetos Concluídos</h4>
+                                <div class="h-48">
+                                    <BarChart :data="completedProjectsChartData" :options="chartOptions" />
                                 </div>
                             </div>
                             <div class="bg-primary p-4 rounded-lg shadow border border-accent">

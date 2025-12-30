@@ -55,8 +55,8 @@ class DashboardController extends Controller
         // Obtém todos os usuários para o dropdown de atribuição
         $allUsers = User::orderBy('name')->get();
 
-        // Obtém estatísticas de projetos
         $totalProjects = Project::count();
+        $completedProjects = Project::where('status', 'completed')->count();
         $overdueProjects = Project::where('due_date', '<', now()->startOfDay())
             ->where('status', '!=', 'completed')
             ->count();
@@ -95,6 +95,7 @@ class DashboardController extends Controller
             'allUsers' => $allUsers,
             'totalProjects' => $totalProjects,
             'totalProjects' => $totalProjects,
+            'completedProjects' => $completedProjects,
             'overdueProjects' => $overdueProjects,
             'leaderboard' => $leaderboard,
             'projectTimeGlobal' => $projectTimeGlobal,
