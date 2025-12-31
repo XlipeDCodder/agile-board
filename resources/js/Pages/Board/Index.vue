@@ -34,7 +34,16 @@ const newCommentForm = useForm({
     files: [],
 });
 
-onMounted(() => { boardColumns.value = props.columns; });
+onMounted(() => { 
+    boardColumns.value = props.columns; 
+    
+    if (window.Echo) {
+        window.Echo.channel('board')
+            .listen('.item.moved', (e) => {
+                router.reload({ only: ['columns'] });
+            });
+    }
+});
 
 watch(() => props.columns, (newColumns) => {
     boardColumns.value = newColumns;

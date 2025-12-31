@@ -6,6 +6,7 @@ use App\Models\Column;
 use App\Models\Item;
 use App\Models\User;
 use App\Models\ItemStatusHistory;
+use App\Events\ItemMoved;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
@@ -57,10 +58,17 @@ class BoardController extends Controller
                         
                         $oldColumnId = $item->column_id;
 
-                        $item->update([
+                        $oldOrder = $item->order_in_column;
+
+                        $item->fill([
                             'column_id' => $columnData['id'],
                             'order_in_column' => $order + 1,
                         ]);
+
+                        if ($item->isDirty(['column_id', 'order_in_column'])) {
+                            $item->save();
+                            event(new ItemMoved($item));
+                        }
 
                         
                         if ($oldColumnId != $item->column_id) {
