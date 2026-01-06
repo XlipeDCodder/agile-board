@@ -3,6 +3,12 @@
 ## Visão Geral
 O **Agile Board** é uma aplicação de gerenciamento de projetos baseada em quadros Kanban, desenvolvida para facilitar o acompanhamento de tarefas, bugs e projetos em tempo real. A aplicação permite a criação de colunas personalizáveis, atribuição de múltiplos responsáveis, rastreamento de tempo, comentários com anexos e visualização de métricas detalhadas.
 
+<img width="1689" height="600" alt="image" src="https://github.com/user-attachments/assets/1373c29c-7f8e-475b-835b-e5e9c9ff0b56" />
+-------------------------------------------------------------------------------------------------------------------------------------------------------------
+<img width="1299" height="926" alt="image" src="https://github.com/user-attachments/assets/febd035d-d752-4fc7-99b5-ed897c0d0be0" />
+
+
+
 ## Stack Tecnológico
 
 ### Backend
