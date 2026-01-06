@@ -1,66 +1,117 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# Documentação Técnica - Agile Board
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+## Visão Geral
+O **Agile Board** é uma aplicação de gerenciamento de projetos baseada em quadros Kanban, desenvolvida para facilitar o acompanhamento de tarefas, bugs e projetos em tempo real. A aplicação permite a criação de colunas personalizáveis, atribuição de múltiplos responsáveis, rastreamento de tempo, comentários com anexos e visualização de métricas detalhadas.
 
-## About Laravel
+## Stack Tecnológico
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+### Backend
+- **Framework**: Laravel 11.x
+- **Linguagem**: PHP 8.2+
+- **Banco de Dados**: Qualquer um, recomendo Postgres
+- **Real-time**: Laravel Reverb (WebSocket)
+- **Autenticação**: Laravel Breeze
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+### Frontend
+- **Framework**: Vue.js 3 (Composition API)
+- **Roteamento/Hydration**: Inertia.js
+- **Estilização**: Tailwind CSS
+- **Componentes**: Headless UI, Vue Multiselect, Vuedraggable
+- **Gráficos**: Chart.js / Vue-Chartjs
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+## Funcionalidades Principais
 
-## Learning Laravel
+### 1. Quadro Kanban
+- **Drag & Drop**: Movimentação de cards entre colunas com atualização em tempo real.
+- **Colunas Dinâmicas**: Gerenciamento de colunas (To Do, In Progress, Done, etc.).
+- **Cards Detalhados**: Suporte a prioridade, estimativa (pontos), data de vencimento, e tipo (Tarefa/Bug).
+- **Subtarefas**: Checklists dentro de cada card.
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+### 2. Gestão de Projetos
+- **CRUD de Projetos**: Criação e edição de projetos com prazos definidos.
+- **Status de Projeto**: Marcação de projetos como Concluídos ou Em Andamento.
+- **Associação**: Itens do quadro podem ser vinculados a projetos específicos.
 
-You may also try the [Laravel Bootcamp](https://bootcamp.laravel.com), where you will be guided through building a modern Laravel application from scratch.
+### 3. Rastreamento de Tempo (Time Tracking)
+- **Apontamento de Horas**: Registro de tempo gasto em cada item.
+- **Calendário**: Visualização mensal das horas trabalhadas.
+- **Validação**: Limite diário de 10 horas por usuário.
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+### 4. Dashboard e Métricas
+- **Visão Geral**: Gráficos unificados de projetos (Total, Concluídos, Atrasados).
+- **Produtividade**: Ranking de entregas (Gamification).
+- **Tempo**: Gráficos de horas trabalhadas por projeto (Global e Usuário).
+- **Alertas**: Identificação de usuários ociosos e itens sem responsável.
 
-## Laravel Sponsors
+### 5. Colaboração em Tempo Real
+- **WebSockets**: Utiliza Laravel Reverb para sincronizar o quadro instantaneamente entre todos os usuários conectados.
+- **Eventos**: `ItemMoved` dispara atualizações automáticas via canal privado `board`.
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+## Estrutura do Banco de Dados (Principais Tabelas)
 
-### Premium Partners
+- `users`: Usuários do sistema.
+- `projects`: Projetos com `name`, `description`, `due_date`, `status`.
+- `columns`: Colunas do quadro com `order` para organização.
+- `items`: Tarefas/Cards principais.
+    - FKs: `column_id`, `project_id`, `creator_id`.
+    - Campos: `priority`, `type`, `estimation`.
+- `item_user`: Tabela pivot para atribuição múltipla de responsáveis.
+- `subtasks`: Sub-itens vinculados a um `item_id`.
+- `comments`: Comentários em itens (suporta anexos via `comment_attachments`).
+- `time_entries`: Registros de horas trabalhadas (`minutes`, `date`).
 
-- **[Vehikl](https://vehikl.com/)**
-- **[Tighten Co.](https://tighten.co)**
-- **[WebReinvent](https://webreinvent.com/)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel/)**
-- **[Cyber-Duck](https://cyber-duck.co.uk)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Jump24](https://jump24.co.uk)**
-- **[Redberry](https://redberry.international/laravel/)**
-- **[Active Logic](https://activelogic.com)**
-- **[byte5](https://byte5.de)**
-- **[OP.GG](https://op.gg)**
+## Instalação e Configuração
 
-## Contributing
+### Requisitos
+- PHP 8.2+
+- Node.js & NPM
+- Composer
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+### Passos
+1.  **Clone o repositório**:
+    ```bash
+    git clone <url-do-repo>
+    cd agile-board
+    ```
 
-## Code of Conduct
+2.  **Instale dependências de Backend**:
+    ```bash
+    composer install
+    ```
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+3.  **Instale dependências de Frontend**:
+    ```bash
+    npm install
+    ```
 
-## Security Vulnerabilities
+4.  **Configure o ambiente**:
+    ```bash
+    cp .env.example .env
+    php artisan key:generate
+    ```
+    *Certifique-se de configurar `BROADCAST_CONNECTION=reverb` no `.env`.*
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+5.  **Execute as migrações**:
+    ```bash
+    php artisan migrate
+    ```
 
-## License
+6.  **Inicie os servidores(Isso é desenvolvimento, para prod use nginx e php-fpm e um serviço em background para o reverb)**:
+    *Terminal 1 (Laravel)*: `php artisan serve`
+    *Terminal 2 (Vite)*: `npm run dev`
+    *Terminal 3 (Reverb)*: `php artisan reverb:start`
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+7.  **Dicas extras**:
+    *Ao rodar as migrations, não será criado um user admin, para isso ao registrar um user, entre no banco de dados e mude o campo `is_admin` para `1` ou crie um seeder(acredite no seu potencial).
+    *O sistema é baseado em projetos, antes de criar um item, crie um projeto para garantir as melhores metricas no dashboard.
+    *A coluna "Feito" é usada para marcar itens como concluídos e disparar o auto arquivamento do item, então garanta a existência de uma coluna "Feito".
+    *O sistema possui um limite de 10 horas por usuário por dia, para alterar isso da uma olhada no código pois nessa altura do campeonato só Deus sabe como eu fiz.
+
+## Fluxo de Real-time (Detalhe Técnico)
+1.  **Ação**: Usuário move um card no Frontend.
+2.  **Request**: `BoardController::reorder` é chamado.
+3.  **Processamento**: Banco de dados é atualizado.
+4.  **Evento**: `ItemMoved` é disparado (implementa `ShouldBroadcastNow`).
+5.  **Broadcasting**: Laravel envia payload para o servidor Reverb.
+6.  **Listening**: Clientes conectados via `Laravel Echo` no canal `board` recebem o evento `.item.moved`.
+7.  **Reação**: Frontend recarrega as colunas (`router.reload({ only: ['columns'] })`).
