@@ -71,17 +71,34 @@ function onDragEnd() {
 
 const openCreateItemModal = (columnId) => {
     itemForm.reset();
+    itemForm.clearErrors();
+    // Forçar limpeza manual para garantir que dados antigos não persistam
+    itemForm.id = null;
+    itemForm.title = '';
+    itemForm.description = '';
+    itemForm.type = 'task';
+    itemForm.priority = 'Média';
+    itemForm.assignee_ids = [];
+    itemForm.due_date = null;
+    itemForm.project_id = null;
+    itemForm.estimation = null;
+    itemForm.subtasks = [];
+    itemForm.comments = [];
+    
     itemForm.column_id = columnId;
     showItemModal.value = true;
 };
 
 const openEditItemModal = (item) => {
+    itemForm.reset(); // Garante estado limpo antes de preencher
+    itemForm.clearErrors();
+    
     itemForm.id = item.id;
     itemForm.title = item.title;
     itemForm.description = item.description;
     itemForm.type = item.type;
     itemForm.priority = item.priority;
-    itemForm.assignee_ids = item.assignees.map(user => user.id); // Mapeia para um array de IDs
+    itemForm.assignee_ids = item.assignees.map(user => user.id); 
     itemForm.due_date = item.due_date;
     itemForm.column_id = item.column_id;
     itemForm.project_id = item.project_id;
