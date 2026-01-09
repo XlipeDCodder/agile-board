@@ -8,6 +8,8 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests; // Importa a trait
 
+use App\Events\ItemCreated;
+
 class ItemController extends Controller
 {
     use AuthorizesRequests; // Usa a trait
@@ -46,6 +48,9 @@ class ItemController extends Controller
             'item_id' => $item->id,
             'column_id' => $item->column_id,
         ]);
+
+        event(new ItemCreated($item));
+        event(new \App\Events\ItemAssigned($item));
 
         return back();
     }

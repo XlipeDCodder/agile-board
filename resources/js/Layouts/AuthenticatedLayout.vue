@@ -1,13 +1,48 @@
 <script setup>
-import { ref } from 'vue';
+import { ref, onMounted } from 'vue';
 import ApplicationLogo from '@/Components/ApplicationLogo.vue';
 import Dropdown from '@/Components/Dropdown.vue';
 import DropdownLink from '@/Components/DropdownLink.vue';
 import NavLink from '@/Components/NavLink.vue';
 import ResponsiveNavLink from '@/Components/ResponsiveNavLink.vue';
-import { Link } from '@inertiajs/vue3';
+import { Link, usePage } from '@inertiajs/vue3';
 
 const showingNavigationDropdown = ref(false);
+const notificationMessage = ref(null);
+const showNotification = ref(false);
+
+const playNotificationSound = () => {
+    const audio = new Audio('/notify.mp3');
+    audio.play().catch(error => console.log('Audio play failed:', error));
+};
+
+onMounted(() => {
+    const page = usePage();
+    if (page.props.auth.user && window.Echo) {
+        window.Echo.private(`App.Models.User.${page.props.auth.user.id}`)
+            .listen('.Illuminate\\Notifications\\Events\\BroadcastNotificationCreated', (notification) => {
+                // O evento padrão do Laravel envia 'type' como o nome da classe da notificação
+                // Ex: "App\\Notifications\\ItemAssignedNotification"
+                // Nossos dados customizados estão geralmente em 'notification' (se vindo do helper) ou 'notification.data'
+                
+                // Vamos verificar se é a nossa notificação de atribuição
+                const isAssignment = 
+                    notification.type === 'App\\Notifications\\ItemAssignedNotification' || 
+                    notification.data?.type === 'assignment' ||
+                    notification.type === 'assignment'; // Caso raríssimo
+
+                if (isAssignment) {
+                    notificationMessage.value = notification.message || notification.data?.message || 'Nova atribuição recebida';
+                    showNotification.value = true;
+                    playNotificationSound();
+                    
+                    setTimeout(() => {
+                        showNotification.value = false;
+                    }, 5000);
+                }
+            });
+    }
+});
 </script>
 
 <template>
@@ -200,6 +235,23 @@ const showingNavigationDropdown = ref(false);
             <main>
                 <slot />
             </main>
+        </div>
+        <!-- Notification Toast -->
+        <div v-if="showNotification" class="fixed bottom-4 right-4 bg-white border border-gray-200 shadow-lg rounded-lg p-4 flex items-center space-x-3 z-50 animate-bounce-in">
+            <div class="flex-shrink-0">
+                <svg class="h-6 w-6 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                </svg>
+            </div>
+            <div>
+                <p class="text-sm font-medium text-gray-900">Nova Atribuição</p>
+                <p class="text-sm text-gray-500">{{ notificationMessage }}</p>
+            </div>
+            <button @click="showNotification = false" class="text-gray-400 hover:text-gray-500">
+                <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+            </button>
         </div>
     </div>
 </template>

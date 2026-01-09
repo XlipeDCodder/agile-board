@@ -41,6 +41,9 @@ onMounted(() => {
         window.Echo.channel('board')
             .listen('.item.moved', (e) => {
                 router.reload({ only: ['columns'] });
+            })
+            .listen('.item.created', (e) => {
+                router.reload({ only: ['columns'] });
             });
     }
 });
