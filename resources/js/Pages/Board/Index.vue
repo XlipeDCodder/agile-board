@@ -180,6 +180,31 @@ const isOverdue = (dateString) => {
     return due < today;
 };
 
+// Filtros
+const searchQuery = ref('');
+const filterProjectId = ref(null);
+
+const matchesFilter = (item) => {
+    // 1. Filtro de Texto (ID ou Título)
+    if (searchQuery.value) {
+        const query = searchQuery.value.toLowerCase();
+        const matchesId = item.id.toString().includes(query);
+        const matchesTitle = item.title.toLowerCase().includes(query);
+        
+        if (!matchesId && !matchesTitle) {
+            return false;
+        }
+    }
+
+    // 2. Filtro de Projeto
+    if (filterProjectId.value) {
+        if (!item.project_id || item.project_id !== filterProjectId.value) {
+            return false;
+        }
+    }
+
+    return true;
+};
 </script>
 
 <!-- Estilos para o vue-multiselect e para o tema dark -->
@@ -196,6 +221,24 @@ const isOverdue = (dateString) => {
 
         <div class="py-12">
             <div class="max-w-full mx-auto sm:px-6 lg:px-8">
+                <!-- Filtros -->
+                <div class="flex justify-end mb-6">
+                    <div class="flex flex-col md:flex-row space-y-4 md:space-y-0 md:space-x-4 bg-secondary p-4 rounded-lg shadow border border-accent">
+                        <div class="relative w-full md:w-48">
+                            <span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-text-secondary">
+                                 <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+                            </span>
+                            <input v-model="searchQuery" type="text" placeholder="Filtrar..." class="pl-10 block w-full rounded-md bg-primary border-accent text-text-primary shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                        </div>
+                        <div class="w-full md:w-64">
+                            <select v-model="filterProjectId" class="block w-full rounded-md bg-primary border-accent text-text-primary shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                                <option :value="null">Todos os Projetos</option>
+                                <option v-for="proj in projects" :key="proj.id" :value="proj.id">{{ proj.name }}</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
                 <div class="overflow-x-auto pb-4">
                     <div class="inline-flex space-x-6 px-1">
                         <div v-for="column in boardColumns" :key="column.id" class="bg-secondary rounded-lg shadow-md flex flex-col w-80 flex-shrink-0">
@@ -207,7 +250,7 @@ const isOverdue = (dateString) => {
                             </div>
                             <draggable v-model="column.items" group="items" item-key="id" class="p-4 space-y-4 flex-grow" @end="onDragEnd">
                                 <template #item="{element: item}">
-                                    <div @click="openEditItemModal(item)" class="bg-primary p-3 rounded-md shadow cursor-pointer">
+                                    <div v-show="matchesFilter(item)" @click="openEditItemModal(item)" class="bg-primary p-3 rounded-md shadow cursor-pointer">
                                         <div class="flex justify-between items-start">
                                             <h3 class="font-bold text-text-primary">{{ item.title }}</h3>
                                             <div class="flex items-center space-x-2 flex-shrink-0">
@@ -279,11 +322,12 @@ const isOverdue = (dateString) => {
                         <div><label class="block text-sm font-medium">Prioridade</label><select v-model="itemForm.priority" class="mt-1 block w-full rounded-md bg-primary border-accent text-text-primary shadow-sm"><option>Baixa</option><option>Média</option><option>Alta</option><option>Crítica</option></select></div>
                         <div><label class="block text-sm font-medium">Tipo</label><select v-model="itemForm.type" class="mt-1 block w-full rounded-md bg-primary border-accent text-text-primary shadow-sm"><option value="task">Tarefa</option><option value="bug">Bug</option></select></div>
                         <div class="md:col-span-2">
-                            <label class="block text-sm font-medium">Projeto</label>
-                            <select v-model="itemForm.project_id" class="mt-1 block w-full rounded-md bg-primary border-accent text-text-primary shadow-sm">
-                                <option :value="null">Sem Projeto</option>
+                            <label class="block text-sm font-medium">Projeto <span class="text-red-500">*</span></label>
+                            <select v-model="itemForm.project_id" class="mt-1 block w-full rounded-md bg-primary border-accent text-text-primary shadow-sm" required>
+                                <option :value="null" disabled>Selecione um projeto</option>
                                 <option v-for="proj in projects" :key="proj.id" :value="proj.id">{{ proj.name }}</option>
                             </select>
+                            <div v-if="itemForm.errors.project_id" class="text-red-500 text-xs mt-1">{{ itemForm.errors.project_id }}</div>
                         </div>
                         <div class="md:col-span-2"><label class="block text-sm font-medium">Estimativa</label><select v-model="itemForm.estimation" class="mt-1 block w-full rounded-md bg-primary border-accent text-text-primary shadow-sm"><option :value="null">Não estimado</option><option v-for="p in [1,2,3,5,8,13,20]" :value="p">{{p}} Pontos</option></select></div>
                     </div>

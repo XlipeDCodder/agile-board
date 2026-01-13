@@ -39,7 +39,7 @@ class BoardController extends Controller
         return Inertia::render('Board/Index', [
             'columns' => $columns,
             'users' => User::all(['id', 'name']),
-            'projects' => \App\Models\Project::all(['id', 'name', 'due_date']),
+            'projects' => \App\Models\Project::where('status', 'open')->get(['id', 'name', 'due_date']),
         ]);
     }
 

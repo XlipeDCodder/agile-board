@@ -1,0 +1,9 @@
+filtro por projeto na secao de backlog e quadro
+apontamento mostrar apenas cards que n foram concluidos
+limitar movimentacao de cards entre colunas para apenas os responsaveis ou admin
+poder deletar colunas na tela de admin
+prazos de cards definidos por nivel de complexidade podendo sofrer alteracoes usando enums definidos pelo jimin
+notificar quando estiver para estourar prazo do projeto e do card
+notificar horario da daily 
+criar modulo de sprint com tempo maximo de 15 dias 
+criar input de justificativa em caso de atraso do card e permitir jogar este card atrasado para uma sprint futura linkando ela a sprint original
