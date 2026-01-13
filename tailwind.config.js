@@ -20,7 +20,7 @@ export default {
                 'primary': '#313131ff',   // Fundo principal mais escuro
                 'secondary': '#444444', // Fundo de elementos secundários (colunas, modais)
                 'accent': '#B0B0B0',    // Cor de destaque para bordas, ícones
-                'text-primary': '#E0E0E0', // Cor de texto principal (claro)
+                'text-primary': '#858585ff', // Cor de texto principal (claro)
                 'text-secondary': '#888888', // Cor de texto secundário (cinza mais claro)
             },
         },
