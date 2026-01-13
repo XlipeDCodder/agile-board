@@ -52,4 +52,35 @@ class ColumnController extends Controller
 
         return back()->with('success', 'Ordem das colunas atualizada!');
     }
+    /**
+     * Atualiza o nome da coluna.
+     */
+    public function update(Request $request, Column $column)
+    {
+        $this->authorize('update', Column::class);
+
+        $validated = $request->validate([
+            'name' => 'required|string|max:255|unique:columns,name,' . $column->id,
+        ]);
+
+        $column->update(['name' => $validated['name']]);
+
+        return back()->with('success', 'Coluna atualizada com sucesso!');
+    }
+
+    /**
+     * Remove uma coluna.
+     */
+    public function destroy(Column $column)
+    {
+        $this->authorize('delete', Column::class);
+
+        if ($column->items()->count() > 0) {
+            return back()->withErrors(['error' => 'Não é possível excluir uma coluna que contém cards. Mova os cards primeiro.']);
+        }
+
+        $column->delete();
+
+        return back()->with('success', 'Coluna removida com sucesso!');
+    }
 }

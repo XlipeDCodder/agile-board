@@ -42,6 +42,8 @@ Route::middleware('auth')->group(function () {
     Route::get('/backlog', [BacklogController::class, 'index'])->name('backlog.index');
     Route::get('/completed', [CompletedController::class, 'index'])->name('completed.index');
     Route::post('/columns', [ColumnController::class, 'store'])->name('columns.store');
+    Route::put('/columns/{column}', [ColumnController::class, 'update'])->name('columns.update');
+    Route::delete('/columns/{column}', [ColumnController::class, 'destroy'])->name('columns.destroy');
     Route::patch('/columns/reorder', [ColumnController::class, 'reorder'])->name('columns.reorder');
     Route::get('/admin/columns', [ColumnManagementController::class, 'index'])->name('admin.columns.index');
     Route::post('/comments', [CommentController::class, 'store'])->name('comments.store');

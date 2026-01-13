@@ -17,8 +17,10 @@ class ColumnManagementController extends Controller
         // Protege a página inteira. Apenas admins podem aceder.
         $this->authorize('create', Column::class);
 
+        $columns = Column::orderBy('order')->withCount('items')->get();
+
         return Inertia::render('Admin/Columns/Index', [
-            'columns' => Column::orderBy('order')->get(),
+            'columns' => $columns,
         ]);
     }
 }
