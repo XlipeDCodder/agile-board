@@ -9,14 +9,16 @@ import Multiselect from 'vue-multiselect';
 const props = defineProps({
     items: Object,
     users: Array,
+    projects: Array,
 });
 
 const showItemModal = ref(false);
+const expandedImage = ref(null); // Para modal de imagem
 
 const itemForm = useForm({
     id: null, title: '', description: '', type: 'task',
     priority: 'Média', assignee_ids: [], due_date: null,
-    column_id: null, estimation: null, subtasks: [], comments: [],
+    column_id: null, project_id: null, estimation: null, subtasks: [], comments: [],
 });
 
 const newSubtaskForm = useForm({
@@ -27,6 +29,7 @@ const newSubtaskForm = useForm({
 const newCommentForm = useForm({
     body: '',
     item_id: null,
+    files: [],
 });
 
 const openEditItemModal = (item) => {
@@ -38,6 +41,7 @@ const openEditItemModal = (item) => {
     itemForm.assignee_ids = item.assignees.map(user => user.id);
     itemForm.due_date = item.due_date;
     itemForm.column_id = item.column_id;
+    itemForm.project_id = item.project_id;
     itemForm.estimation = item.estimation;
     itemForm.subtasks = item.subtasks || [];
     itemForm.comments = item.comments || [];
@@ -127,13 +131,13 @@ const addComment = () => {
         </div>
 
         <Modal :show="showItemModal" @close="closeModal">
-             <div class="p-6 bg-secondary text-text-primary">
+            <div class="p-6 bg-secondary text-text-primary">
                 <h2 class="text-2xl font-bold mb-4">Editar Item</h2>
                 <form @submit.prevent="saveItem">
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div class="md:col-span-2"><label class="block text-sm font-medium">Título</label><input type="text" v-model="itemForm.title" class="mt-1 block w-full rounded-md bg-primary border-accent text-text-primary shadow-sm"></div>
                         <div class="md:col-span-2"><label class="block text-sm font-medium">Descrição</label><textarea v-model="itemForm.description" rows="3" class="mt-1 block w-full rounded-md bg-primary border-accent text-text-primary shadow-sm"></textarea></div>
-                        
+
                         <div class="md:col-span-2">
                             <label class="block text-sm font-medium">Responsáveis</label>
                             <Multiselect
@@ -150,6 +154,15 @@ const addComment = () => {
                         </div>
 
                         <div><label class="block text-sm font-medium">Prioridade</label><select v-model="itemForm.priority" class="mt-1 block w-full rounded-md bg-primary border-accent text-text-primary shadow-sm"><option>Baixa</option><option>Média</option><option>Alta</option><option>Crítica</option></select></div>
+                        <div><label class="block text-sm font-medium">Tipo</label><select v-model="itemForm.type" class="mt-1 block w-full rounded-md bg-primary border-accent text-text-primary shadow-sm"><option value="task">Tarefa</option><option value="bug">Bug</option></select></div>
+                        <div class="md:col-span-2">
+                            <label class="block text-sm font-medium">Projeto <span class="text-red-500">*</span></label>
+                            <select v-model="itemForm.project_id" class="mt-1 block w-full rounded-md bg-primary border-accent text-text-primary shadow-sm" required>
+                                <option :value="null" disabled>Selecione um projeto</option>
+                                <option v-for="proj in projects" :key="proj.id" :value="proj.id">{{ proj.name }}</option>
+                            </select>
+                            <div v-if="itemForm.errors.project_id" class="text-red-500 text-xs mt-1">{{ itemForm.errors.project_id }}</div>
+                        </div>
                         <div class="md:col-span-2"><label class="block text-sm font-medium">Estimativa</label><select v-model="itemForm.estimation" class="mt-1 block w-full rounded-md bg-primary border-accent text-text-primary shadow-sm"><option :value="null">Não estimado</option><option v-for="p in [1,2,3,5,8,13,20]" :value="p">{{p}} Pontos</option></select></div>
                     </div>
                     <div class="mt-6 flex justify-end space-x-4"><button type="button" @click="closeModal" class="px-4 py-2 bg-accent text-primary rounded-md">Cancelar</button><button type="submit" :disabled="itemForm.processing" class="px-4 py-2 bg-blue-600 text-white rounded-md">Salvar</button></div>
@@ -157,15 +170,71 @@ const addComment = () => {
 
                 <div v-if="itemForm.id" class="mt-6 border-t border-accent pt-4">
                     <h3 class="text-lg font-bold mb-2">Subtarefas</h3>
-                    <div class="space-y-2"><div v-for="subtask in itemForm.subtasks" :key="subtask.id" class="flex items-center"><input type="checkbox" :checked="!!subtask.completed_at" @change="toggleSubtask(subtask)" class="h-4 w-4 rounded border-accent bg-primary text-indigo-600 focus:ring-indigo-500"><span class="ml-3 text-sm" :class="{'line-through text-text-secondary': subtask.completed_at}">{{ subtask.title }}</span></div></div>
-                    <form @submit.prevent="addSubtask" class="mt-4 flex items-center space-x-2"><input type="text" v-model="newSubtaskForm.title" placeholder="Adicionar nova subtarefa..." class="flex-grow block w-full rounded-md bg-primary border-accent text-text-primary shadow-sm text-sm"><button type="submit" :disabled="newSubtaskForm.processing" class="px-3 py-1.5 bg-green-500 text-white rounded-md text-sm">Adicionar</button></form>
+                    <div class="space-y-2">
+                        <div v-for="subtask in itemForm.subtasks" :key="subtask.id" class="flex items-center">
+                            <input type="checkbox" :checked="!!subtask.completed_at" @change="toggleSubtask(subtask)" class="h-4 w-4 rounded border-accent bg-primary text-indigo-600 focus:ring-indigo-500">
+                            <span class="ml-3 text-sm" :class="{'line-through text-text-secondary': subtask.completed_at}">{{ subtask.title }}</span>
+                        </div>
+                    </div>
+                    <form @submit.prevent="addSubtask" class="mt-4 flex items-center space-x-2">
+                        <input type="text" v-model="newSubtaskForm.title" placeholder="Adicionar nova subtarefa..." class="flex-grow block w-full rounded-md bg-primary border-accent text-text-primary shadow-sm text-sm">
+                        <button type="submit" :disabled="newSubtaskForm.processing" class="px-3 py-1.5 bg-green-500 text-white rounded-md text-sm">Adicionar</button>
+                    </form>
                 </div>
 
                 <div v-if="itemForm.id" class="mt-6 border-t border-accent pt-4">
                     <h3 class="text-lg font-bold mb-4">Comentários</h3>
-                    <form @submit.prevent="addComment" class="mb-4"><textarea v-model="newCommentForm.body" rows="3" placeholder="Adicionar um comentário..." class="w-full rounded-md bg-primary border-accent text-text-primary shadow-sm"></textarea><div v-if="newCommentForm.errors.body" class="text-red-500 text-xs">{{ newCommentForm.errors.body }}</div><button type="submit" :disabled="newCommentForm.processing" class="mt-2 px-4 py-2 bg-blue-600 text-white rounded-md text-sm">Comentar</button></form>
-                    <div class="space-y-4 max-h-60 overflow-y-auto"><div v-for="comment in itemForm.comments" :key="comment.id" class="flex items-start space-x-3"><div class="flex-shrink-0"><span class="inline-flex items-center justify-center h-8 w-8 rounded-full bg-primary"><span class="text-sm font-medium leading-none text-text-primary">{{ comment.user.name.charAt(0) }}</span></span></div><div class="flex-1"><div class="bg-primary rounded-lg px-3 py-2"><p class="text-sm font-semibold text-text-primary">{{ comment.user.name }}</p><p class="text-sm text-text-primary mt-1 whitespace-pre-wrap">{{ comment.body }}</p></div><span class="text-xs text-text-secondary mt-1">{{ new Date(comment.created_at).toLocaleString() }}</span></div></div></div>
+                    <form @submit.prevent="addComment" class="mb-4">
+                        <textarea v-model="newCommentForm.body" rows="3" placeholder="Adicionar um comentário..." class="w-full rounded-md bg-primary border-accent text-text-primary shadow-sm"></textarea>
+                        <div v-if="newCommentForm.errors.body" class="text-red-500 text-xs">{{ newCommentForm.errors.body }}</div>
+                        <div class="mt-2">
+                            <label class="block text-sm font-medium text-text-secondary mb-1">Anexar arquivos</label>
+                            <input type="file" id="comment-files" @input="newCommentForm.files = $event.target.files" multiple class="block w-full text-sm text-text-secondary file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-text-primary hover:file:bg-secondary"/>
+                        </div>
+                        <button type="submit" :disabled="newCommentForm.processing" class="mt-2 px-4 py-2 bg-blue-600 text-white rounded-md text-sm">Comentar</button>
+                    </form>
+                    <div class="space-y-4 max-h-60 overflow-y-auto">
+                        <div v-for="comment in itemForm.comments" :key="comment.id" class="flex items-start space-x-3">
+                            <div class="flex-shrink-0">
+                                <span class="inline-flex items-center justify-center h-8 w-8 rounded-full bg-primary">
+                                    <span class="text-sm font-medium leading-none text-text-primary">{{ comment.user.name.charAt(0) }}</span>
+                                </span>
+                            </div>
+                            <div class="flex-1">
+                                <div class="bg-primary rounded-lg px-3 py-2">
+                                    <p class="text-sm font-semibold text-text-primary">{{ comment.user.name }}</p>
+                                    <p class="text-sm text-text-primary mt-1 whitespace-pre-wrap">{{ comment.body }}</p>
+                                    
+                                    <div v-if="comment.attachments && comment.attachments.length > 0" class="mt-2 grid grid-cols-2 gap-2">
+                                        <div v-for="attachment in comment.attachments" :key="attachment.id" class="relative group">
+                                            <div v-if="attachment.mime_type && attachment.mime_type.startsWith('image/')" 
+                                                 class="cursor-pointer overflow-hidden rounded border border-accent hover:opacity-90 transition"
+                                                 @click="expandedImage = '/storage/' + attachment.file_path">
+                                                <img :src="'/storage/' + attachment.file_path" class="w-full h-24 object-cover">
+                                            </div>
+                                            <div v-else class="flex items-center p-2 rounded border border-accent bg-secondary hover:bg-primary transition">
+                                                <a :href="'/storage/' + attachment.file_path" download class="flex items-center space-x-2 w-full text-text-primary text-xs">
+                                                    <svg class="h-4 w-4 text-text-secondary" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                                                    <span class="truncate">{{ attachment.file_name }}</span>
+                                                </a>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <span class="text-xs text-text-secondary mt-1">{{ new Date(comment.created_at).toLocaleString() }}</span>
+                            </div>
+                        </div>
+                    </div>
                 </div>
+            </div>
+        </Modal>
+
+        <Modal :show="!!expandedImage" @close="expandedImage = null">
+            <div class="p-2 bg-black flex justify-center items-center h-full relative" @click="expandedImage = null">
+                <img :src="expandedImage" class="max-w-full max-h-screen object-contain text-white">
+                <button class="absolute top-4 right-4 text-white hover:text-gray-300" @click.stop="expandedImage = null">
+                    <svg class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                </button>
             </div>
         </Modal>
     </AuthenticatedLayout>

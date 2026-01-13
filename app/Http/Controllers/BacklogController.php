@@ -27,7 +27,7 @@ class BacklogController extends Controller
                 $query->where('column_id', '!=', $doneColumnId);
             })
             // Carrega os relacionamentos necessários para a exibição
-            ->with(['assignees', 'column', 'subtasks', 'comments.user'])
+            ->with(['assignees', 'column', 'subtasks', 'comments.user', 'comments.attachments', 'project'])
             // Ordena pelos mais recentes primeiro
             ->latest()
             // Pagina os resultados para melhor performance
@@ -37,6 +37,7 @@ class BacklogController extends Controller
             'items' => $items,
             // Precisamos dos usuários para o modal de edição
             'users' => User::all(['id', 'name']),
+            'projects' => \App\Models\Project::where('status', 'open')->get(['id', 'name']),
         ]);
     }
 }
