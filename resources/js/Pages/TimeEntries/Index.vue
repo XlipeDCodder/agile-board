@@ -87,9 +87,6 @@ const submit = () => {
         form.put(route('time-entries.update', editingEntryId.value), {
             onSuccess: () => {
                 cancelEdit();
-                // Keep modal open to see changes or close? 
-                // User requirement: "modal... mostre a lista... com botão de deletar ou alterar". 
-                // So typically we keep it open or reset form. Let's keep open and reset form.
             },
         });
     } else {
@@ -128,7 +125,9 @@ const activeSelection = computed({
         return selectedItem.value && activeItems.value.find(i => i.id === selectedItem.value.id) ? selectedItem.value : null;
     },
     set: (val) => {
-        if (val) selectedItem.value = val;
+        selectedItem.value = val;
+        if (val) form.item_id = val.id;
+        else form.item_id = null;
     }
 });
 
@@ -137,9 +136,14 @@ const completedSelection = computed({
         return selectedItem.value && completedItems.value.find(i => i.id === selectedItem.value.id) ? selectedItem.value : null;
     },
     set: (val) => {
-        if (val) selectedItem.value = val;
+        selectedItem.value = val;
+        if (val) form.item_id = val.id;
+        else form.item_id = null;
     }
 });
+
+const isSelectedActive = computed(() => selectedItem.value && activeItems.value.find(i => i.id === selectedItem.value.id));
+const isSelectedCompleted = computed(() => selectedItem.value && completedItems.value.find(i => i.id === selectedItem.value.id));
 
 // Watch for form resets or editing changes to update selectedItem
 // Since form.reset() might happen, we need to ensure selectedItem is cleared or set.
@@ -264,8 +268,7 @@ const cancelEdit = () => {
                                         label="title"
                                         placeholder="Selecione um card em aberto"
                                         class="w-full"
-                                        :disabled="isEditing"
-                                        @select="(option) => form.item_id = option.id"
+                                        :disabled="isEditing || isSelectedCompleted"
                                     />
                                 </div>
 
@@ -278,8 +281,7 @@ const cancelEdit = () => {
                                         label="title"
                                         placeholder="Selecione um card concluído"
                                         class="w-full"
-                                        :disabled="isEditing"
-                                        @select="(option) => form.item_id = option.id"
+                                        :disabled="isEditing || isSelectedActive"
                                     />
                                 </div>
                             </div>
