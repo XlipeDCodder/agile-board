@@ -73,29 +73,6 @@ const getTotalTimeForDate = (date) => {
 const isEditing = ref(false);
 const editingEntryId = ref(null);
 
-const openModal = (date) => {
-    selectedDate.value = date;
-    cancelEdit(); // Reset to add mode
-    form.clearErrors();
-    form.date = formatDate(date);
-    showModal.value = true;
-};
-
-const editEntry = (entry) => {
-    isEditing.value = true;
-    editingEntryId.value = entry.id;
-    form.clearErrors();
-    form.item_id = entry.item_id;
-    form.hours = Math.floor(entry.minutes / 60);
-    form.minutes = entry.minutes % 60;
-};
-
-const cancelEdit = () => {
-    isEditing.value = false;
-    editingEntryId.value = null;
-    form.reset('item_id', 'hours', 'minutes');
-    form.clearErrors();
-};
 
 const prevMonth = () => {
     currentDate.value = new Date(currentDate.value.getFullYear(), currentDate.value.getMonth() - 1, 1);
@@ -139,6 +116,60 @@ const formatTime = (minutes) => {
     const h = Math.floor(minutes / 60);
     const m = minutes % 60;
     return `${h}h ${m}m`;
+};
+
+const activeItems = computed(() => props.items.filter(i => i.column && i.column.name !== 'Feito'));
+const completedItems = computed(() => props.items.filter(i => i.column && i.column.name === 'Feito'));
+
+const selectedItem = ref(null);
+
+const activeSelection = computed({
+    get: () => {
+        return selectedItem.value && activeItems.value.find(i => i.id === selectedItem.value.id) ? selectedItem.value : null;
+    },
+    set: (val) => {
+        if (val) selectedItem.value = val;
+    }
+});
+
+const completedSelection = computed({
+    get: () => {
+        return selectedItem.value && completedItems.value.find(i => i.id === selectedItem.value.id) ? selectedItem.value : null;
+    },
+    set: (val) => {
+        if (val) selectedItem.value = val;
+    }
+});
+
+// Watch for form resets or editing changes to update selectedItem
+// Since form.reset() might happen, we need to ensure selectedItem is cleared or set.
+// However, editingEntryId change is a good trigger, or just managing it in the open/edit functions.
+
+const openModal = (date) => {
+    selectedDate.value = date;
+    cancelEdit(); // Reset to add mode
+    form.clearErrors();
+    form.date = formatDate(date);
+    selectedItem.value = null; // Clear selection
+    showModal.value = true;
+};
+
+const editEntry = (entry) => {
+    isEditing.value = true;
+    editingEntryId.value = entry.id;
+    form.clearErrors();
+    form.item_id = entry.item_id;
+    selectedItem.value = props.items.find(i => i.id === entry.item_id); // Set selection object
+    form.hours = Math.floor(entry.minutes / 60);
+    form.minutes = entry.minutes % 60;
+};
+
+const cancelEdit = () => {
+    isEditing.value = false;
+    editingEntryId.value = null;
+    form.reset('item_id', 'hours', 'minutes');
+    selectedItem.value = null;
+    form.clearErrors();
 };
 </script>
 
@@ -191,7 +222,7 @@ const formatTime = (minutes) => {
         </div>
 
         <Modal :show="showModal" @close="showModal = false" maxWidth="4xl">
-            <div class="p-6 bg-secondary text-text-primary flex flex-col md:flex-row gap-6">
+            <div class="p-6 bg-secondary text-text-primary flex flex-col md:flex-row gap-6 min-h-[600px]">
                 <!-- Left Column: List of Entries -->
                 <div class="md:w-1/2 border-r border-accent pr-6">
                     <h3 class="text-xl font-bold mb-4">Apontamentos do Dia ({{ selectedDate ? formatDate(selectedDate) : '' }})</h3>
@@ -223,19 +254,38 @@ const formatTime = (minutes) => {
                     <h3 class="text-xl font-bold mb-4">{{ isEditing ? 'Editar Apontamento' : 'Novo Apontamento' }}</h3>
                     <form @submit.prevent="submit">
                         <div class="space-y-4">
-                            <div>
-                                <label class="block text-sm font-medium mb-1">Card / Tarefa</label>
-                                <Multiselect
-                                    v-model="form.item_id"
-                                    :options="items.map(i => i.id)"
-                                    :custom-label="opt => items.find(i => i.id === opt).title"
-                                    placeholder="Selecione um card"
-                                    class="w-full"
-                                    :disabled="isEditing"
-                                />
-                                <div v-if="form.errors.item_id" class="text-red-500 text-sm mt-1">{{ form.errors.item_id }}</div>
-                                <p v-if="isEditing" class="text-xs text-text-secondary mt-1">O card não pode ser alterado na edição.</p>
+                            <div class="space-y-4">
+                                <div>
+                                    <label class="block text-sm font-medium mb-1">Cards em Aberto</label>
+                                    <Multiselect
+                                        v-model="activeSelection"
+                                        :options="activeItems"
+                                        track-by="id"
+                                        label="title"
+                                        placeholder="Selecione um card em aberto"
+                                        class="w-full"
+                                        :disabled="isEditing"
+                                        @select="(option) => form.item_id = option.id"
+                                    />
+                                </div>
+
+                                <div>
+                                    <label class="block text-sm font-medium mb-1">Cards Concluídos</label>
+                                    <Multiselect
+                                        v-model="completedSelection"
+                                        :options="completedItems"
+                                        track-by="id"
+                                        label="title"
+                                        placeholder="Selecione um card concluído"
+                                        class="w-full"
+                                        :disabled="isEditing"
+                                        @select="(option) => form.item_id = option.id"
+                                    />
+                                </div>
                             </div>
+
+                            <div v-if="form.errors.item_id" class="text-red-500 text-sm mt-1">{{ form.errors.item_id }}</div>
+                            <p v-if="isEditing" class="text-xs text-text-secondary mt-1">O card não pode ser alterado na edição.</p>
 
                             <div class="grid grid-cols-2 gap-4">
                                 <div>

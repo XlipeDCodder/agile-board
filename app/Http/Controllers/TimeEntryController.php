@@ -28,7 +28,7 @@ class TimeEntryController extends Controller
         // Let's return Items where user is assignee OR items created by user.
         $items = Item::whereHas('assignees', function($q) use ($user) {
             $q->where('id', $user->id);
-        })->orWhere('creator_id', $user->id)->with('project')->get();
+        })->orWhere('creator_id', $user->id)->with(['project', 'column'])->get();
 
         return Inertia::render('TimeEntries/Index', [
             'entries' => $entries,
