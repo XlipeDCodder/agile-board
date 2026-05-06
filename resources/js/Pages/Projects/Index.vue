@@ -69,7 +69,7 @@ const saveProject = () => {
 const formatDate = (dateString) => {
     if (!dateString) return 'N/A';
     const [year, month, day] = dateString.split('-');
-    return new Date(year, month - 1, day).toLocaleDateString();
+    return new Date(year, month - 1, day).toLocaleDateString('pt-BR');
 };
 
 const isOverdue = (dateString) => {
@@ -86,7 +86,6 @@ const deleteProject = (id) => {
         router.delete(route('projects.destroy', id));
     }
 };
-
 </script>
 
 <template>
@@ -95,82 +94,183 @@ const deleteProject = (id) => {
     <AuthenticatedLayout>
         <template #header>
             <div class="flex justify-between items-center">
-                <h2 class="font-semibold text-xl text-text-primary leading-tight">Projetos</h2>
-                <button @click="openCreateModal" class="px-4 py-2 bg-blue-600 text-white rounded-md text-sm hover:bg-blue-700">
+                <h2 class="font-bold text-4xl text-text-main leading-tight">📁 Projetos</h2>
+                <button 
+                    @click="openCreateModal" 
+                    class="btn-primary flex items-center gap-2 shadow-lg hover:shadow-xl transition"
+                >
+                    <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4" />
+                    </svg>
                     Novo Projeto
                 </button>
             </div>
         </template>
 
-        <div class="py-12">
-            <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    <div v-for="project in projects" :key="project.id" class="bg-secondary overflow-hidden shadow-sm rounded-lg border border-accent transition-all duration-300" :class="{'opacity-75 bg-gray-100': project.status === 'completed'}">
-                        <div class="p-6">
-                            <div class="flex justify-between items-start mb-4">
-                                <div class="flex items-center gap-2">
-                                    <h3 class="text-lg font-bold text-text-primary" :class="{'line-through text-text-secondary': project.status === 'completed'}">{{ project.name }}</h3>
-                                    <span v-if="project.status === 'completed'" class="px-2 py-0.5 rounded-full bg-green-100 text-green-800 text-xs font-bold border border-green-200">
-                                        Concluído
-                                    </span>
-                                </div>
-                                <div class="flex space-x-2">
-                                    <button @click="toggleStatus(project)" class="text-green-500 hover:text-green-600" :title="project.status === 'open' ? 'Concluir' : 'Reabrir'">
-                                        <svg v-if="project.status === 'open'" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
-                                        <svg v-else class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
-                                    </button>
-                                    <button @click="openEditModal(project)" class="text-blue-500 hover:text-blue-400">
-                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
-                                    </button>
-                                    <button @click="deleteProject(project.id)" class="text-red-500 hover:text-red-400">
-                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
-                                    </button>
-                                </div>
-                            </div>
-                            <p class="text-text-secondary text-sm mb-4">{{ project.description || 'Sem descrição.' }}</p>
-                            
-                            <div class="flex justify-between items-center text-xs text-text-secondary border-t border-accent pt-4">
-                                <div>
-                                    <span class="font-bold">Vencimento:</span>
-                                    <span :class="{'text-red-500 font-bold': isOverdue(project.due_date) && project.status !== 'completed', 'ml-1': true}">
-                                        {{ formatDate(project.due_date) }}
-                                    </span>
-                                </div>
-                                <div>
-                                    <span class="font-bold">Itens:</span> {{ project.items_count }}
-                                </div>
+        <div class="py-8 px-4 sm:px-6 lg:px-8">
+            <!-- Empty State -->
+            <div v-if="projects.length === 0" class="text-center py-16">
+                <svg class="mx-auto h-16 w-16 text-text-muted mb-4 opacity-50" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <h3 class="text-xl font-bold text-text-main mb-2">Nenhum projeto encontrado</h3>
+                <p class="text-text-muted mb-8">Crie seu primeiro projeto para começar</p>
+                <button 
+                    @click="openCreateModal"
+                    class="btn-primary"
+                >
+                    Criar Projeto
+                </button>
+            </div>
+
+            <!-- Projects Grid -->
+            <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div 
+                    v-for="project in projects" 
+                    :key="project.id" 
+                    class="card card-hover group flex flex-col h-full hover:border-brand/50 transition-all"
+                    :class="{'opacity-60': project.status === 'completed'}"
+                >
+                    <!-- Header -->
+                    <div class="flex justify-between items-start mb-4">
+                        <div class="flex-1">
+                            <h3 
+                                class="text-lg font-bold text-text-main group-hover:text-brand transition"
+                                :class="{'line-through text-text-muted': project.status === 'completed'}"
+                            >
+                                {{ project.name }}
+                            </h3>
+                            <div v-if="project.status === 'completed'" class="mt-2">
+                                <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-trello-green/10 text-trello-green">
+                                    ✓ Concluído
+                                </span>
                             </div>
                         </div>
                     </div>
-                </div>
-                
-                <div v-if="projects.length === 0" class="text-center text-text-secondary mt-10">
-                    Nenhum projeto encontrado.
+
+                    <!-- Description -->
+                    <p v-if="project.description" class="text-text-muted text-sm mb-4 flex-1 line-clamp-3">
+                        {{ project.description }}
+                    </p>
+                    <p v-else class="text-text-muted text-sm italic mb-4 flex-1">
+                        Sem descrição
+                    </p>
+
+                    <!-- Due Date -->
+                    <div class="mb-4 p-3 rounded-lg bg-surface border border-border-main">
+                        <div class="flex items-center justify-between text-sm">
+                            <span class="text-text-muted font-medium">📅 Vencimento:</span>
+                            <span 
+                                class="font-bold"
+                                :class="{
+                                    'text-trello-red': isOverdue(project.due_date) && project.status !== 'completed',
+                                    'text-text-main': !isOverdue(project.due_date) || project.status === 'completed'
+                                }"
+                            >
+                                {{ formatDate(project.due_date) }}
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- Footer with Actions -->
+                    <div class="flex items-center justify-between pt-4 border-t border-border-main">
+                        <div class="text-sm text-text-muted font-medium">
+                            <span class="font-bold text-text-main">{{ project.items_count }}</span> itens
+                        </div>
+                        <div class="flex gap-2">
+                            <button 
+                                @click="toggleStatus(project)" 
+                                class="p-2.5 rounded-lg hover:bg-surface-hover transition text-text-muted hover:text-trello-green hover:scale-110 active:scale-95"
+                                :title="project.status === 'open' ? 'Marcar como concluído' : 'Reabrir projeto'"
+                            >
+                                <svg v-if="project.status === 'open'" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                                </svg>
+                                <svg v-else class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                </svg>
+                            </button>
+                            <button 
+                                @click="openEditModal(project)" 
+                                class="p-2.5 rounded-lg hover:bg-surface-hover transition text-text-muted hover:text-brand hover:scale-110 active:scale-95"
+                                title="Editar projeto"
+                            >
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                </svg>
+                            </button>
+                            <button 
+                                @click="deleteProject(project.id)" 
+                                class="p-2.5 rounded-lg hover:bg-surface-hover transition text-text-muted hover:text-trello-red hover:scale-110 active:scale-95"
+                                title="Excluir projeto"
+                            >
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
 
-        <Modal :show="showModal" @close="closeModal">
-            <div class="p-6 bg-secondary text-text-primary">
-                <h2 class="text-2xl font-bold mb-4">{{ isEditing ? 'Editar Projeto' : 'Novo Projeto' }}</h2>
-                <form @submit.prevent="saveProject">
-                    <div class="space-y-4">
-                        <div>
-                            <label class="block text-sm font-medium">Nome</label>
-                            <input type="text" v-model="form.name" class="mt-1 block w-full rounded-md bg-primary border-accent text-text-primary shadow-sm" required>
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium">Descrição</label>
-                            <textarea v-model="form.description" rows="3" class="mt-1 block w-full rounded-md bg-primary border-accent text-text-primary shadow-sm"></textarea>
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium">Data de Vencimento</label>
-                            <input type="date" v-model="form.due_date" class="mt-1 block w-full rounded-md bg-primary border-accent text-text-primary shadow-sm">
-                        </div>
+        <!-- Modal para criar/editar projeto -->
+        <Modal :show="showModal" @close="closeModal" max-width="md">
+            <div class="p-6 bg-surface-variant">
+                <h2 class="text-2xl font-bold mb-6 text-text-main">
+                    {{ isEditing ? '✏️ Editar Projeto' : '➕ Novo Projeto' }}
+                </h2>
+
+                <form @submit.prevent="saveProject" class="space-y-6">
+                    <!-- Nome -->
+                    <div>
+                        <label class="block text-sm font-bold text-text-main mb-2">Nome do Projeto *</label>
+                        <input 
+                            type="text" 
+                            v-model="form.name" 
+                            class="input-field w-full"
+                            placeholder="Ex: Website Redesign"
+                            required
+                        >
                     </div>
-                    <div class="mt-6 flex justify-end space-x-4">
-                        <button type="button" @click="closeModal" class="px-4 py-2 bg-accent text-primary rounded-md">Cancelar</button>
-                        <button type="submit" :disabled="form.processing" class="px-4 py-2 bg-blue-600 text-white rounded-md">Salvar</button>
+
+                    <!-- Descrição -->
+                    <div>
+                        <label class="block text-sm font-bold text-text-main mb-2">Descrição</label>
+                        <textarea 
+                            v-model="form.description" 
+                            rows="4" 
+                            class="input-field w-full"
+                            placeholder="Descreva os objetivos do projeto..."
+                        ></textarea>
+                    </div>
+
+                    <!-- Data de Vencimento -->
+                    <div>
+                        <label class="block text-sm font-bold text-text-main mb-2">Data de Vencimento</label>
+                        <input 
+                            type="date" 
+                            v-model="form.due_date" 
+                            class="input-field w-full"
+                        >
+                    </div>
+
+                    <!-- Botões -->
+                    <div class="flex justify-end gap-3 pt-6 border-t border-border-main">
+                        <button 
+                            type="button" 
+                            @click="closeModal" 
+                            class="btn-secondary"
+                        >
+                            Cancelar
+                        </button>
+                        <button 
+                            type="submit" 
+                            :disabled="form.processing"
+                            class="btn-primary"
+                        >
+                            {{ form.processing ? '⏳ Salvando...' : '💾 Salvar' }}
+                        </button>
                     </div>
                 </form>
             </div>

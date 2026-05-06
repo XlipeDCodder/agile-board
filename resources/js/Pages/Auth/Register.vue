@@ -22,92 +22,121 @@ const submit = () => {
 
 <template>
     <GuestLayout>
-        <Head title="Register" />
+        <Head title="Registrar - B-Agile" />
 
-        <form @submit.prevent="submit">
-            <div>
-                <InputLabel for="name" value="Name" />
-
-                <TextInput
-                    id="name"
-                    type="text"
-                    class="mt-1 block w-full"
-                    v-model="form.name"
-                    required
-                    autofocus
-                    autocomplete="name"
-                />
-
-                <InputError class="mt-2" :message="form.errors.name" />
+        <div class="w-full animate-fade-in">
+            <!-- Header -->
+            <div class="text-center mb-8">
+                <div class="flex justify-center mb-4">
+                    <div class="flex h-14 w-14 items-center justify-center rounded-xl bg-gradient-to-br from-brand to-brand/80 shadow-lg">
+                        <span class="text-xl font-bold text-white">B</span>
+                    </div>
+                </div>
+                <h1 class="text-3xl font-bold text-text-main">Criar Conta</h1>
+                <p class="mt-2 text-text-muted">Comece a gerenciar seus projetos agora</p>
             </div>
 
-            <div class="mt-4">
-                <InputLabel for="email" value="Email" />
+            <!-- Form -->
+            <form @submit.prevent="submit" class="space-y-6">
+                <!-- Name Field -->
+                <div>
+                    <InputLabel for="name" value="Nome Completo" />
+                    <TextInput
+                        id="name"
+                        type="text"
+                        class="mt-2 block w-full"
+                        v-model="form.name"
+                        required
+                        autofocus
+                        autocomplete="name"
+                        placeholder="Seu nome completo"
+                    />
+                    <InputError class="mt-2" :message="form.errors.name" />
+                </div>
 
-                <TextInput
-                    id="email"
-                    type="email"
-                    class="mt-1 block w-full"
-                    v-model="form.email"
-                    required
-                    autocomplete="username"
-                />
+                <!-- Email Field -->
+                <div>
+                    <InputLabel for="email" value="Email" />
+                    <TextInput
+                        id="email"
+                        type="email"
+                        class="mt-2 block w-full"
+                        v-model="form.email"
+                        required
+                        autocomplete="username"
+                        placeholder="seu@email.com"
+                    />
+                    <InputError class="mt-2" :message="form.errors.email" />
+                </div>
 
-                <InputError class="mt-2" :message="form.errors.email" />
+                <!-- Password Field -->
+                <div>
+                    <InputLabel for="password" value="Senha" />
+                    <TextInput
+                        id="password"
+                        type="password"
+                        class="mt-2 block w-full"
+                        v-model="form.password"
+                        required
+                        autocomplete="new-password"
+                        placeholder="••••••••"
+                    />
+                    <InputError class="mt-2" :message="form.errors.password" />
+                </div>
+
+                <!-- Confirm Password Field -->
+                <div>
+                    <InputLabel for="password_confirmation" value="Confirmar Senha" />
+                    <TextInput
+                        id="password_confirmation"
+                        type="password"
+                        class="mt-2 block w-full"
+                        v-model="form.password_confirmation"
+                        required
+                        autocomplete="new-password"
+                        placeholder="••••••••"
+                    />
+                    <InputError class="mt-2" :message="form.errors.password_confirmation" />
+                </div>
+
+                <!-- Submit Button and Link -->
+                <div class="flex flex-col gap-4">
+                    <PrimaryButton
+                        :class="{ 'opacity-50 cursor-not-allowed': form.processing }"
+                        :disabled="form.processing"
+                        class="w-full justify-center py-3 text-base font-bold"
+                    >
+                        {{ form.processing ? '⏳ Criando conta...' : '🚀 Registrar' }}
+                    </PrimaryButton>
+
+                    <div class="text-center">
+                        <span class="text-sm text-text-muted">Já tem uma conta? </span>
+                        <Link
+                            :href="route('login')"
+                            class="text-brand hover:opacity-80 transition font-semibold"
+                        >
+                            Fazer login
+                        </Link>
+                    </div>
+                </div>
+            </form>
+
+            <!-- Divider -->
+            <div class="mt-8 relative">
+                <div class="absolute inset-0 flex items-center">
+                    <div class="w-full border-t border-border-main"></div>
+                </div>
+                <div class="relative flex justify-center text-sm">
+                    <span class="px-2 bg-surface text-text-muted font-medium">ou</span>
+                </div>
             </div>
 
-            <div class="mt-4">
-                <InputLabel for="password" value="Password" />
-
-                <TextInput
-                    id="password"
-                    type="password"
-                    class="mt-1 block w-full"
-                    v-model="form.password"
-                    required
-                    autocomplete="new-password"
-                />
-
-                <InputError class="mt-2" :message="form.errors.password" />
+            <!-- Terms Info -->
+            <div class="mt-8 p-4 rounded-lg border border-border-main bg-surface-variant">
+                <p class="text-xs text-text-muted text-center leading-relaxed">
+                    Ao se registrar, você concorda com nossos <strong class="text-text-main">Termos de Serviço</strong> e <strong class="text-text-main">Política de Privacidade</strong>.
+                </p>
             </div>
-
-            <div class="mt-4">
-                <InputLabel
-                    for="password_confirmation"
-                    value="Confirm Password"
-                />
-
-                <TextInput
-                    id="password_confirmation"
-                    type="password"
-                    class="mt-1 block w-full"
-                    v-model="form.password_confirmation"
-                    required
-                    autocomplete="new-password"
-                />
-
-                <InputError
-                    class="mt-2"
-                    :message="form.errors.password_confirmation"
-                />
-            </div>
-
-            <div class="mt-4 flex items-center justify-end">
-                <Link
-                    :href="route('login')"
-                    class="rounded-md text-sm text-gray-600 underline hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
-                >
-                    Already registered?
-                </Link>
-
-                <PrimaryButton
-                    class="ms-4"
-                    :class="{ 'opacity-25': form.processing }"
-                    :disabled="form.processing"
-                >
-                    Register
-                </PrimaryButton>
-            </div>
-        </form>
+        </div>
     </GuestLayout>
 </template>

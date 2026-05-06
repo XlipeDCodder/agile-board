@@ -1,42 +1,115 @@
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-.multiselect__tags {
-    @apply bg-primary border-accent text-text-primary !important;
-}
-.multiselect__input, .multiselect__single {
-    @apply bg-primary text-text-primary !important;
-}
-.multiselect__content-wrapper {
-    @apply bg-secondary border-accent !important;
-}
-.multiselect__option {
-    @apply text-text-primary !important;
-}
-.multiselect__tag {
-    @apply bg-blue-500 text-white !important;
-}
-.multiselect__tag-icon:after {
-    @apply text-white !important;
-}
-.multiselect__tag-icon:focus, .multiselect__tag-icon:hover {
-    @apply bg-blue-700 !important;
+@layer base {
+  :root {
+    --color-surface: 248 249 251;
+    --color-surface-variant: 255 255 255;
+    --color-surface-hover: 241 242 244;
+    --color-brand: 0 121 191;
+    --color-text-main: 23 43 77;
+    --color-text-muted: 98 111 134;
+    --color-text-subtle: 115 132 150;
+    --color-border-main: 220 223 228;
+    --color-border-subtle: 235 236 240;
+  }
+
+  .dark {
+    --color-surface: 26 29 33;
+    --color-surface-variant: 34 39 43;
+    --color-surface-hover: 45 51 59;
+    --color-brand: 87 157 255;
+    --color-text-main: 182 194 207;
+    --color-text-muted: 133 144 162;
+    --color-text-subtle: 115 132 150;
+    --color-border-main: 56 65 74;
+    --color-border-subtle: 45 51 59;
+  }
+
+  * {
+    @apply font-sans;
+  }
+
+  body {
+    @apply bg-surface text-text-main transition-colors duration-300;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-display font-bold;
+  }
 }
 
-/* Estilo para a opção que está ATIVA (hover) */
-.multiselect__option--highlight {
-    @apply bg-blue-500 text-white !important;
-}
-/* Estilo para a opção que já foi SELECIONADA (não ativa) */
-.multiselect__option--selected {
-    @apply bg-accent text-black font-semibold !important;
-}
-/* Estilo para a label "Selecionado" da opção selecionada */
-.multiselect__option--selected::after {
-    @apply text-black !important;
-}
-/* Estilo para a opção que está SELECIONADA E ATIVA (hover) */
-.multiselect__option--selected.multiselect__option--highlight {
-    @apply bg-blue-600 text-white !important;
+@layer components {
+  /* Sidebar */
+  .sidebar {
+    @apply fixed left-0 top-0 h-screen bg-surface-variant border-r border-border-main transition-all duration-300 z-40 shadow-sidebar;
+  }
+
+  .sidebar.expanded {
+    @apply w-sidebar-width;
+  }
+
+  .sidebar.collapsed {
+    @apply w-sidebar-collapsed;
+  }
+
+  /* Sidebar Items */
+  .sidebar-item {
+    @apply flex items-center gap-3 px-4 py-3 rounded-lg mx-2 text-text-muted hover:text-text-main hover:bg-surface-hover transition-all duration-200 cursor-pointer relative;
+  }
+
+  .sidebar-item.active {
+    @apply text-brand font-medium;
+    background-color: rgb(var(--color-brand) / 0.1);
+  }
+
+  /* Trello Components */
+  .trello-column {
+    @apply bg-surface rounded-2xl shadow-sm w-80 flex flex-col max-h-full border border-border-main hover:shadow-card-hover transition-shadow duration-200;
+  }
+
+  .trello-card {
+    /* Removido 'group' do @apply pois causa erro no build */
+    @apply bg-surface-variant p-4 rounded-xl shadow-card border border-border-main cursor-pointer hover:shadow-card-hover hover:border-brand/50 transition-all duration-200;
+  }
+
+  /* Buttons */
+  .btn-primary {
+    @apply px-4 py-2.5 bg-brand text-white rounded-lg font-semibold hover:opacity-90 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm hover:shadow-md;
+  }
+
+  .btn-secondary {
+    @apply px-4 py-2.5 bg-surface-hover border border-border-main text-text-main rounded-lg font-semibold hover:bg-surface-hover/80 transition-all active:scale-95 disabled:opacity-50;
+  }
+
+  /* Input Fields */
+  .input-field {
+    @apply w-full rounded-lg border border-border-main bg-surface-variant text-text-main placeholder-text-subtle focus:ring-2 focus:ring-brand focus:border-transparent transition-all;
+  }
+
+  /* Cards */
+  .card {
+    @apply bg-surface-variant rounded-xl border border-border-main shadow-card p-6;
+  }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  ::-webkit-scrollbar-track {
+    @apply bg-transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    @apply bg-border-main dark:bg-border-main rounded-full;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-text-muted;
+  }
 }

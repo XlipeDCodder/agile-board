@@ -15,8 +15,8 @@ const props = defineProps({
 const boardColumns = ref([]);
 const showItemModal = ref(false);
 const expandedImage = ref(null);
+const activeTab = ref('details');
 
-// Formulário principal, agora com 'assignee_ids' para múltiplos responsáveis
 const itemForm = useForm({
     id: null, title: '', description: '', type: 'task',
     priority: 'Média', assignee_ids: [], due_date: null,
@@ -75,7 +75,6 @@ function onDragEnd() {
 const openCreateItemModal = (columnId) => {
     itemForm.reset();
     itemForm.clearErrors();
-    // Forçar limpeza manual para garantir que dados antigos não persistam
     itemForm.id = null;
     itemForm.title = '';
     itemForm.description = '';
@@ -87,13 +86,14 @@ const openCreateItemModal = (columnId) => {
     itemForm.estimation = null;
     itemForm.subtasks = [];
     itemForm.comments = [];
+    activeTab.value = 'details';
     
     itemForm.column_id = columnId;
     showItemModal.value = true;
 };
 
 const openEditItemModal = (item) => {
-    itemForm.reset(); // Garante estado limpo antes de preencher
+    itemForm.reset();
     itemForm.clearErrors();
     
     itemForm.id = item.id;
@@ -110,6 +110,7 @@ const openEditItemModal = (item) => {
     itemForm.comments = item.comments;
     newSubtaskForm.parent_id = item.id;
     newCommentForm.item_id = item.id;
+    activeTab.value = 'details';
     showItemModal.value = true;
 };
 
@@ -136,20 +137,23 @@ const addSubtask = () => {
         preserveState: true,
         onSuccess: () => {
             newSubtaskForm.reset('title');
-
         },
     });
+};
+
+const handleFiles = (event) => {
+    newCommentForm.files = event.target.files;
 };
 
 const addComment = () => {
     newCommentForm.post(route('comments.store'), {
         preserveScroll: true,
         preserveState: true,
+        forceFormData: true,
         onSuccess: () => {
             newCommentForm.reset('body', 'files');
-            // Limpa o input file manualmente se necessário, mas o reset deve cuidar do v-model se usarmos componente, 
-            // mas para input nativo precisamos limpar o valor
-            document.getElementById('comment-files').value = null;
+            const fileInput = document.getElementById('comment-files');
+            if (fileInput) fileInput.value = '';
         },
     });
 };
@@ -161,15 +165,14 @@ const toggleSubtask = (subtask) => {
     });
 };
 
-const priorityClasses = (p) => ({ 'Baixa': 'bg-gray-400', 'Média': 'bg-yellow-500', 'Alta': 'bg-orange-500', 'Crítica': 'bg-red-600' }[p]);
+const priorityClasses = (p) => ({ 
+    'Baixa': 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
+    'Média': 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200',
+    'Alta': 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200',
+    'Crítica': 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
+}[p]);
 
 const isBug = (item) => item.type === 'bug';
-
-const formatDate = (dateString) => {
-    if (!dateString) return '';
-    const [year, month, day] = dateString.split('-');
-    return new Date(year, month - 1, day).toLocaleDateString();
-};
 
 const isOverdue = (dateString) => {
     if (!dateString) return false;
@@ -180,214 +183,161 @@ const isOverdue = (dateString) => {
     return due < today;
 };
 
-// Filtros
 const searchQuery = ref('');
 const filterProjectId = ref(null);
 
 const matchesFilter = (item) => {
-    // 1. Filtro de Texto (ID ou Título)
     if (searchQuery.value) {
         const query = searchQuery.value.toLowerCase();
         const matchesId = item.id.toString().includes(query);
         const matchesTitle = item.title.toLowerCase().includes(query);
-        
-        if (!matchesId && !matchesTitle) {
-            return false;
-        }
+        if (!matchesId && !matchesTitle) return false;
     }
-
-    // 2. Filtro de Projeto
     if (filterProjectId.value) {
-        if (!item.project_id || item.project_id !== filterProjectId.value) {
-            return false;
-        }
+        if (!item.project_id || item.project_id !== filterProjectId.value) return false;
     }
-
     return true;
 };
 </script>
 
-<!-- Estilos para o vue-multiselect e para o tema dark -->
 <style src="vue-multiselect/dist/vue-multiselect.css"></style>
-
 
 <template>
     <Head title="Quadro Kanban" />
 
     <AuthenticatedLayout>
         <template #header>
-            <h2 class="font-semibold text-xl text-text-primary leading-tight">Quadro Kanban</h2>
+            <div class="flex justify-between items-center">
+                <h2 class="font-bold text-4xl text-text-main leading-tight">📋 Quadro Kanban</h2>
+            </div>
         </template>
 
-        <div class="py-12">
-            <div class="max-w-full mx-auto sm:px-6 lg:px-8">
-                <!-- Filtros -->
-                <div class="flex justify-end mb-6">
-                    <div class="flex flex-col md:flex-row space-y-4 md:space-y-0 md:space-x-4 bg-secondary p-4 rounded-lg shadow border border-accent">
-                        <div class="relative w-full md:w-48">
-                            <span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-text-secondary">
-                                 <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
-                            </span>
-                            <input v-model="searchQuery" type="text" placeholder="Filtrar..." class="pl-10 block w-full rounded-md bg-primary border-accent text-text-primary shadow-sm focus:ring-blue-500 focus:border-blue-500">
-                        </div>
-                        <div class="w-full md:w-64">
-                            <select v-model="filterProjectId" class="block w-full rounded-md bg-primary border-accent text-text-primary shadow-sm focus:ring-blue-500 focus:border-blue-500">
-                                <option :value="null">Todos os Projetos</option>
-                                <option v-for="proj in projects" :key="proj.id" :value="proj.id">{{ proj.name }}</option>
-                            </select>
-                        </div>
-                    </div>
+        <div class="py-8 px-4 sm:px-6 lg:px-8">
+            <!-- Filtros -->
+            <div class="mb-8 flex flex-col md:flex-row gap-4">
+                <div class="relative flex-1 max-w-sm">
+                    <svg class="absolute inset-y-0 left-3 h-5 w-5 text-text-muted pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                    <input 
+                        v-model="searchQuery" 
+                        type="text" 
+                        placeholder="Buscar por ID ou título..." 
+                        class="input-field pl-10 w-full"
+                    >
                 </div>
+                <select v-model="filterProjectId" class="input-field md:w-64">
+                    <option :value="null">Todos os Projetos</option>
+                    <option v-for="proj in projects" :key="proj.id" :value="proj.id">{{ proj.name }}</option>
+                </select>
+            </div>
 
-                <div class="overflow-x-auto pb-4">
-                    <div class="inline-flex space-x-6 px-1">
-                        <div v-for="column in boardColumns" :key="column.id" class="bg-secondary rounded-lg shadow-md flex flex-col w-80 flex-shrink-0">
-                            <div class="p-4 border-b border-accent flex justify-between items-center">
-                                <h2 class="text-lg font-semibold text-text-primary">{{ column.name }}</h2>
-                                <button @click="openCreateItemModal(column.id)" class="text-text-secondary hover:text-text-primary">
-                                    <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" /></svg>
-                                </button>
+            <!-- Kanban Board -->
+            <div class="overflow-x-auto pb-4 -mx-4 px-4 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8">
+                <div class="inline-flex gap-6">
+                    <div v-for="column in boardColumns" :key="column.id" class="trello-column">
+                        <div class="p-4 border-b border-border-main flex justify-between items-center bg-gradient-to-r from-surface-variant to-surface">
+                            <div>
+                                <h2 class="text-lg font-bold text-text-main">{{ column.name }}</h2>
+                                <p class="text-xs text-text-muted mt-1 font-medium">{{ column.items.length }} itens</p>
                             </div>
-                            <draggable v-model="column.items" group="items" item-key="id" class="p-4 space-y-4 flex-grow" @end="onDragEnd">
-                                <template #item="{element: item}">
-                                    <div v-show="matchesFilter(item)" @click="openEditItemModal(item)" class="bg-primary p-3 rounded-md shadow cursor-pointer">
-                                        <div class="flex justify-between items-start">
-                                            <h3 class="font-bold text-text-primary">{{ item.title }}</h3>
-                                            <div class="flex items-center space-x-2 flex-shrink-0">
-                                                <span v-if="isBug(item)" class="text-red-500" title="Bug">
-                                                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
-                                                </span>
-                                                <span v-else class="text-blue-500" title="Tarefa">
-                                                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                                                </span>
-                                                <span class="w-3 h-3 rounded-full" :class="priorityClasses(item.priority)"></span>
-                                            </div>
-                                        </div>
-                                        <div v-if="item.project" class="mt-1">
-                                            <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-indigo-100 text-indigo-800"
-                                                  :class="{'bg-red-100 text-red-800': isOverdue(item.project.due_date)}">
-                                                {{ item.project.name }}
-                                                <span v-if="!item.due_date && item.project.due_date" class="ml-1 text-xxs opacity-75">
-                                                    ({{ formatDate(item.project.due_date) }})
-                                                </span>
-                                            </span>
-                                        </div>
-                                        <p class="text-sm text-text-secondary mt-2">{{ item.description }}</p>
-                                        <div v-if="item.subtasks && item.subtasks.length > 0" class="mt-3 border-t border-accent pt-2 text-xs text-text-secondary italic">
-                                            Existem subtarefas, clique para exibir
-                                        </div>
-                                        <div class="mt-3 flex justify-between items-center border-t border-accent pt-2">
-                                            <span class="text-xs text-text-secondary">#{{ item.id }}</span>
-                                            <div v-if="item.estimation" class="text-xs font-bold bg-secondary text-text-primary rounded-full px-2 py-1">{{ item.estimation }} pts</div>
-                                            <!-- Novo visual para múltiplos responsáveis -->
-                                            <div class="flex -space-x-2 overflow-hidden">
-                                                <div v-if="item.assignees.length === 0" class="inline-block h-6 w-6 rounded-full bg-gray-500 text-white flex items-center justify-center text-xs" title="Não atribuído">?</div>
-                                                <div v-for="assignee in item.assignees" :key="assignee.id" class="inline-block h-6 w-6 rounded-full ring-2 ring-secondary bg-blue-500 text-white flex items-center justify-center text-xs" :title="assignee.name">
-                                                    {{ assignee.name.charAt(0) }}
-                                                </div>
-                                            </div>
+                            <button @click="openCreateItemModal(column.id)" class="p-2.5 rounded-lg hover:bg-surface-hover transition text-text-muted hover:text-brand hover:scale-110 active:scale-95">
+                                <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4" /></svg>
+                            </button>
+                        </div>
+
+                        <draggable v-model="column.items" group="items" item-key="id" class="p-4 space-y-3 flex-grow overflow-y-auto" @end="onDragEnd">
+                            <template #item="{element: item}">
+                                <div v-show="matchesFilter(item)" @click="openEditItemModal(item)" class="trello-card group">
+                                    <div class="flex justify-between items-start mb-3">
+                                        <h3 class="font-bold text-text-main flex-1 group-hover:text-brand transition line-clamp-2">{{ item.title }}</h3>
+                                        <div class="flex items-center gap-1.5 flex-shrink-0 ml-2">
+                                            <span v-if="isBug(item)" class="text-trello-red"><svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" /></svg></span>
+                                            <span v-else class="text-brand"><svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" /></svg></span>
                                         </div>
                                     </div>
-                                </template>
-                            </draggable>
-                        </div>
+                                    <p v-if="item.description" class="text-sm text-text-muted mb-3 line-clamp-2">{{ item.description }}</p>
+                                    <div v-if="item.project" class="mb-3">
+                                        <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold" :class="isOverdue(item.project.due_date) ? 'bg-trello-red/10 text-trello-red' : 'bg-brand/10 text-brand'">{{ item.project.name }}</span>
+                                    </div>
+                                    <div class="flex items-center justify-between text-xs text-text-muted border-t border-border-main pt-3 mb-3">
+                                        <div class="flex items-center gap-2">
+                                            <span class="font-mono font-bold">#{{ item.id }}</span>
+                                            <span v-if="item.estimation" class="px-2 py-0.5 rounded-full bg-surface text-text-main font-bold text-xs">{{ item.estimation }} pts</span>
+                                        </div>
+                                        <span class="px-2 py-0.5 rounded-full text-xs font-bold" :class="priorityClasses(item.priority)">{{ item.priority }}</span>
+                                    </div>
+                                    <div class="flex items-center justify-between">
+                                        <div v-if="item.subtasks?.length > 0" class="text-xs text-text-muted font-medium">📋 {{ item.subtasks.filter(s => s.completed_at).length }}/{{ item.subtasks.length }}</div>
+                                        <div class="flex -space-x-2">
+                                            <div v-for="assignee in item.assignees.slice(0, 3)" :key="assignee.id" class="h-6 w-6 rounded-full ring-2 ring-surface-variant bg-brand text-white flex items-center justify-center text-xs font-bold" :title="assignee.name">{{ assignee.name.charAt(0).toUpperCase() }}</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </template>
+                        </draggable>
                     </div>
                 </div>
             </div>
         </div>
 
-        <Modal :show="showItemModal" @close="closeModal">
-            <div class="p-6 bg-secondary text-text-primary">
-                <h2 class="text-2xl font-bold mb-4">{{ itemForm.id ? 'Editar Item' : 'Criar Novo Item' }}</h2>
-                <form @submit.prevent="saveItem">
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div class="md:col-span-2"><label class="block text-sm font-medium">Título</label><input type="text" v-model="itemForm.title" class="mt-1 block w-full rounded-md bg-primary border-accent text-text-primary shadow-sm"></div>
-                        <div class="md:col-span-2"><label class="block text-sm font-medium">Descrição</label><textarea v-model="itemForm.description" rows="3" class="mt-1 block w-full rounded-md bg-primary border-accent text-text-primary shadow-sm"></textarea></div>
-
-                        <div class="md:col-span-2">
-                            <label class="block text-sm font-medium">Responsáveis</label>
-                            <Multiselect
-                                v-model="itemForm.assignee_ids"
-                                :options="users.map(user => user.id)"
-                                :custom-label="opt => users.find(user => user.id === opt).name"
-                                :multiple="true"
-                                placeholder="Selecione os responsáveis"
-                                selectLabel="Clique para selecionar"
-                                deselectLabel="Clique para remover"
-                                selectedLabel="Selecionado"
-                                class="mt-1"
-                            ></Multiselect>
-                        </div>
-
-                        <div><label class="block text-sm font-medium">Prioridade</label><select v-model="itemForm.priority" class="mt-1 block w-full rounded-md bg-primary border-accent text-text-primary shadow-sm"><option>Baixa</option><option>Média</option><option>Alta</option><option>Crítica</option></select></div>
-                        <div><label class="block text-sm font-medium">Tipo</label><select v-model="itemForm.type" class="mt-1 block w-full rounded-md bg-primary border-accent text-text-primary shadow-sm"><option value="task">Tarefa</option><option value="bug">Bug</option></select></div>
-                        <div class="md:col-span-2">
-                            <label class="block text-sm font-medium">Projeto <span class="text-red-500">*</span></label>
-                            <select v-model="itemForm.project_id" class="mt-1 block w-full rounded-md bg-primary border-accent text-text-primary shadow-sm" required>
-                                <option :value="null" disabled>Selecione um projeto</option>
-                                <option v-for="proj in projects" :key="proj.id" :value="proj.id">{{ proj.name }}</option>
-                            </select>
-                            <div v-if="itemForm.errors.project_id" class="text-red-500 text-xs mt-1">{{ itemForm.errors.project_id }}</div>
-                        </div>
-                        <div class="md:col-span-2"><label class="block text-sm font-medium">Estimativa</label><select v-model="itemForm.estimation" class="mt-1 block w-full rounded-md bg-primary border-accent text-text-primary shadow-sm"><option :value="null">Não estimado</option><option v-for="p in [1,2,3,5,8,13,20]" :value="p">{{p}} Pontos</option></select></div>
-                    </div>
-                    <div class="mt-6 flex justify-end space-x-4"><button type="button" @click="closeModal" class="px-4 py-2 bg-accent text-primary rounded-md">Cancelar</button><button type="submit" :disabled="itemForm.processing" class="px-4 py-2 bg-blue-600 text-white rounded-md">Salvar</button></div>
-                </form>
-
-                <div v-if="itemForm.id" class="mt-6 border-t border-accent pt-4">
-                    <h3 class="text-lg font-bold mb-2">Subtarefas</h3>
-                    <div class="space-y-2">
-                        <div v-for="subtask in itemForm.subtasks" :key="subtask.id" class="flex items-center">
-                            <input type="checkbox" :checked="!!subtask.completed_at" @change="toggleSubtask(subtask)" class="h-4 w-4 rounded border-accent bg-primary text-indigo-600 focus:ring-indigo-500">
-                            <span class="ml-3 text-sm" :class="{'line-through text-text-secondary': subtask.completed_at}">{{ subtask.title }}</span>
-                        </div>
-                    </div>
-                    <form @submit.prevent="addSubtask" class="mt-4 flex items-center space-x-2">
-                        <input type="text" v-model="newSubtaskForm.title" placeholder="Adicionar nova subtarefa..." class="flex-grow block w-full rounded-md bg-primary border-accent text-text-primary shadow-sm text-sm">
-                        <button type="submit" :disabled="newSubtaskForm.processing" class="px-3 py-1.5 bg-green-500 text-white rounded-md text-sm">Adicionar</button>
-                    </form>
+        <Modal :show="showItemModal" @close="closeModal" max-width="3xl">
+            <div class="p-6 bg-surface-variant max-h-[90vh] overflow-y-auto">
+                <h2 class="text-2xl font-bold mb-6 text-text-main">{{ itemForm.id ? '✏️ Editar Item' : '➕ Novo Item' }}</h2>
+                <div v-if="itemForm.id" class="flex gap-2 mb-6 border-b border-border-main">
+                    <button @click="activeTab = 'details'" :class="['px-4 py-2 font-medium border-b-2 transition', activeTab === 'details' ? 'border-brand text-brand' : 'border-transparent text-text-muted hover:text-text-main']">📝 Detalhes</button>
+                    <button @click="activeTab = 'comments'" :class="['px-4 py-2 font-medium border-b-2 transition', activeTab === 'comments' ? 'border-brand text-brand' : 'border-transparent text-text-muted hover:text-text-main']">💬 Comentários ({{ itemForm.comments?.length || 0 }})</button>
                 </div>
 
-                <div v-if="itemForm.id" class="mt-6 border-t border-accent pt-4">
-                    <h3 class="text-lg font-bold mb-4">Comentários</h3>
-                    <form @submit.prevent="addComment" class="mb-4">
-                        <textarea v-model="newCommentForm.body" rows="3" placeholder="Adicionar um comentário..." class="w-full rounded-md bg-primary border-accent text-text-primary shadow-sm"></textarea>
-                        <div v-if="newCommentForm.errors.body" class="text-red-500 text-xs">{{ newCommentForm.errors.body }}</div>
-                        <div class="mt-2">
-                            <label class="block text-sm font-medium text-text-secondary mb-1">Anexar arquivos</label>
-                            <input type="file" id="comment-files" @input="newCommentForm.files = $event.target.files" multiple class="block w-full text-sm text-text-secondary file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-text-primary hover:file:bg-secondary"/>
-                        </div>
-                        <button type="submit" :disabled="newCommentForm.processing" class="mt-2 px-4 py-2 bg-blue-600 text-white rounded-md text-sm">Comentar</button>
-                    </form>
-                    <div class="space-y-4 max-h-60 overflow-y-auto">
-                        <div v-for="comment in itemForm.comments" :key="comment.id" class="flex items-start space-x-3">
-                            <div class="flex-shrink-0">
-                                <span class="inline-flex items-center justify-center h-8 w-8 rounded-full bg-primary">
-                                    <span class="text-sm font-medium leading-none text-text-primary">{{ comment.user.name.charAt(0) }}</span>
-                                </span>
+                <form v-if="activeTab === 'details'" @submit.prevent="saveItem" class="space-y-6">
+                    <div><label class="block text-sm font-bold text-text-main mb-2">Título *</label><input type="text" v-model="itemForm.title" class="input-field w-full" required></div>
+                    <div><label class="block text-sm font-bold text-text-main mb-2">Descrição</label><textarea v-model="itemForm.description" rows="4" class="input-field w-full"></textarea></div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div><label class="block text-sm font-bold text-text-main mb-2">Tipo</label><select v-model="itemForm.type" class="input-field w-full"><option value="task">Tarefa</option><option value="bug">Bug</option></select></div>
+                        <div><label class="block text-sm font-bold text-text-main mb-2">Prioridade</label><select v-model="itemForm.priority" class="input-field w-full"><option>Baixa</option><option>Média</option><option>Alta</option><option>Crítica</option></select></div>
+                        <div class="md:col-span-2"><label class="block text-sm font-bold text-text-main mb-2">Projeto *</label><select v-model="itemForm.project_id" class="input-field w-full" required><option v-for="proj in projects" :key="proj.id" :value="proj.id">{{ proj.name }}</option></select></div>
+                        <div class="md:col-span-2"><label class="block text-sm font-bold text-text-main mb-2">Responsáveis</label><Multiselect v-model="itemForm.assignee_ids" :options="users.map(u => u.id)" :custom-label="id => users.find(u => u.id === id)?.name" :multiple="true" placeholder="Selecionar responsáveis"></Multiselect></div>
+                    </div>
+                    <div class="flex justify-end gap-3 pt-6 border-t border-border-main"><button type="button" @click="closeModal" class="btn-secondary">Cancelar</button><button type="submit" class="btn-primary">Salvar</button></div>
+                </form>
+
+                <div v-if="activeTab === 'comments' && itemForm.id" class="space-y-6">
+                    <form @submit.prevent="addComment" class="space-y-4">
+                        <textarea v-model="newCommentForm.body" placeholder="Escreva um comentário..." rows="3" class="input-field w-full"></textarea>
+                        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                            <div>
+                                <label class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-surface-hover border border-border-main text-sm text-text-muted cursor-pointer hover:text-text-main transition">
+                                    📎 Anexar arquivos
+                                    <input type="file" id="comment-files" @input="newCommentForm.files = $event.target.files" multiple class="hidden">
+                                </label>
+                                <div v-if="newCommentForm.files?.length > 0" class="mt-2 flex flex-wrap gap-2"><span v-for="f in newCommentForm.files" :key="f.name" class="text-xs px-2 py-1 rounded bg-brand/10 text-brand">{{ f.name }}</span></div>
                             </div>
-                            <div class="flex-1">
-                                <div class="bg-primary rounded-lg px-3 py-2">
-                                    <p class="text-sm font-semibold text-text-primary">{{ comment.user.name }}</p>
-                                    <p class="text-sm text-text-primary mt-1 whitespace-pre-wrap">{{ comment.body }}</p>
+                            <button type="submit" :disabled="newCommentForm.processing || !newCommentForm.body" class="btn-primary">Enviar</button>
+                        </div>
+                    </form>
+
+                    <div class="space-y-4 max-h-96 overflow-y-auto">
+                        <div v-for="comment in itemForm.comments" :key="comment.id" class="p-4 rounded-xl bg-surface border border-border-main shadow-sm">
+                            <div class="flex gap-3 mb-3">
+                                <div class="h-8 w-8 rounded-full bg-brand text-white flex items-center justify-center text-xs font-bold">{{ comment.user?.name?.charAt(0) }}</div>
+                                <div class="flex-1 min-w-0">
+                                    <div class="flex items-center gap-2 mb-1"><p class="font-bold text-text-main text-sm">{{ comment.user?.name }}</p><p class="text-xs text-text-muted">{{ new Date(comment.created_at).toLocaleString() }}</p></div>
+                                    <p class="text-sm text-text-main whitespace-pre-wrap">{{ comment.body }}</p>
                                     
-                                    <div v-if="comment.attachments && comment.attachments.length > 0" class="mt-2 grid grid-cols-2 gap-2">
+                                    <div v-if="comment.attachments?.length > 0" class="mt-3 grid grid-cols-2 gap-2 border-t border-border-main/50 pt-3">
                                         <div v-for="attachment in comment.attachments" :key="attachment.id" class="relative group">
-                                            <div v-if="attachment.mime_type && attachment.mime_type.startsWith('image/')" 
-                                                 class="cursor-pointer overflow-hidden rounded border border-accent hover:opacity-90 transition"
-                                                 @click="expandedImage = '/storage/' + attachment.file_path">
+                                            <div v-if="attachment.mime_type?.startsWith('image/')" class="cursor-pointer overflow-hidden rounded-lg border border-border-main hover:opacity-90 transition" @click.stop="expandedImage = '/storage/' + attachment.file_path">
                                                 <img :src="'/storage/' + attachment.file_path" class="w-full h-24 object-cover">
                                             </div>
-                                            <div v-else class="flex items-center p-2 rounded border border-accent bg-secondary hover:bg-primary transition">
-                                                <a :href="'/storage/' + attachment.file_path" download class="flex items-center space-x-2 w-full text-text-primary text-xs">
-                                                    <svg class="h-4 w-4 text-text-secondary" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                                            <div v-else class="flex items-center p-2 rounded-lg border border-border-main bg-surface-variant hover:bg-surface-hover transition">
+                                                <a :href="'/storage/' + attachment.file_path" download target="_blank" @click.stop class="flex items-center gap-2 w-full text-text-main text-xs truncate">
+                                                    <svg class="h-4 w-4 text-text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
                                                     <span class="truncate">{{ attachment.file_name }}</span>
                                                 </a>
                                             </div>
                                         </div>
                                     </div>
                                 </div>
-                                <span class="text-xs text-text-secondary mt-1">{{ new Date(comment.created_at).toLocaleString() }}</span>
                             </div>
                         </div>
                     </div>
@@ -395,11 +345,11 @@ const matchesFilter = (item) => {
             </div>
         </Modal>
 
-        <Modal :show="!!expandedImage" @close="expandedImage = null">
-            <div class="p-2 bg-black flex justify-center items-center h-full relative" @click="expandedImage = null">
-                <img :src="expandedImage" class="max-w-full max-h-screen object-contain text-white">
+        <Modal :show="!!expandedImage" @close="expandedImage = null" max-width="5xl">
+            <div class="p-2 bg-black flex justify-center items-center h-full relative min-h-[50vh]" @click="expandedImage = null">
+                <img :src="expandedImage" class="max-w-full max-h-[85vh] object-contain">
                 <button class="absolute top-4 right-4 text-white hover:text-gray-300" @click.stop="expandedImage = null">
-                    <svg class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                    <svg class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M6 18L18 6M6 6l12 12" /></svg>
                 </button>
             </div>
         </Modal>

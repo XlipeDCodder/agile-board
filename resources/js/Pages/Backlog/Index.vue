@@ -209,11 +209,11 @@ const addComment = () => {
                                         <div v-for="attachment in comment.attachments" :key="attachment.id" class="relative group">
                                             <div v-if="attachment.mime_type && attachment.mime_type.startsWith('image/')" 
                                                  class="cursor-pointer overflow-hidden rounded border border-accent hover:opacity-90 transition"
-                                                 @click="expandedImage = '/storage/' + attachment.file_path">
+                                                 @click.stop="expandedImage = '/storage/' + attachment.file_path">
                                                 <img :src="'/storage/' + attachment.file_path" class="w-full h-24 object-cover">
                                             </div>
                                             <div v-else class="flex items-center p-2 rounded border border-accent bg-secondary hover:bg-primary transition">
-                                                <a :href="'/storage/' + attachment.file_path" download class="flex items-center space-x-2 w-full text-text-primary text-xs">
+                                                <a :href="'/storage/' + attachment.file_path" download target="_blank" @click.stop class="flex items-center space-x-2 w-full text-text-primary text-xs">
                                                     <svg class="h-4 w-4 text-text-secondary" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
                                                     <span class="truncate">{{ attachment.file_name }}</span>
                                                 </a>
