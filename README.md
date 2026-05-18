@@ -106,8 +106,9 @@ O **Agile Board** é uma aplicação de gerenciamento de projetos baseada em qua
     *Terminal 1 (Laravel)*: `php artisan serve`
     *Terminal 2 (Vite)*: `npm run dev`
     *Terminal 3 (Reverb)*: `php artisan reverb:start`
+    *Terminal 4 (Queue)*: `php artisan queue:work`
 
-7.  **Dicas extras**:
+8.  **Dicas extras**:
     *Ao rodar as migrations, não será criado um user admin, para isso ao registrar um user, entre no banco de dados e mude o campo `is_admin` para `1` ou crie um seeder(acredite no seu potencial).
     *O sistema é baseado em projetos, antes de criar um item, crie um projeto para garantir as melhores metricas no dashboard.
     *A coluna "Feito" é usada para marcar itens como concluídos e disparar o auto arquivamento do item, então garanta a existência de uma coluna "Feito".
