@@ -35,4 +35,11 @@ return [
         ],
     ],
 
+    'bot' => [
+        // Defina como false em desenvolvimento local quando o PHP no Windows
+        // não tem cacert.pem configurado (erro "cURL error 60").
+        // Em produção, mantenha true.
+        'verify_ssl' => env('BOT_VERIFY_SSL', true),
+    ],
+
 ];

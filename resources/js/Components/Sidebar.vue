@@ -44,20 +44,18 @@ const isActive = (route) => page.url.includes(route.split('.')[0]);
 const showConfirmModal = ref(false);
 const pendingRoute = ref(null);
 
-const handleAdminClick = (item, event) => {
-    if (item.requiresConfirm) {
-        event.preventDefault();
-        pendingRoute.value = item.route;
-        showConfirmModal.value = true;
-    }
+const openConfirm = (item) => {
+    pendingRoute.value = item.route;
+    showConfirmModal.value = true;
 };
 
 const confirmNavigation = () => {
-    if (pendingRoute.value) {
-        router.visit(route(pendingRoute.value));
-    }
+    const target = pendingRoute.value;
     showConfirmModal.value = false;
     pendingRoute.value = null;
+    if (target) {
+        router.visit(route(target));
+    }
 };
 
 const cancelNavigation = () => {
@@ -115,24 +113,41 @@ const cancelNavigation = () => {
                     Admin
                 </div>
                 
-                <Link
-                    v-for="item in adminItems"
-                    :key="item.route"
-                    :href="route(item.route)"
-                    @click="handleAdminClick(item, $event)"
-                    :class="[
-                        'sidebar-item group',
-                        isActive(item.route) ? 'active' : ''
-                    ]"
-                >
-                    <svg class="w-5 h-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" :d="item.icon_svg" />
-                    </svg>
-                    <span v-if="isExpanded" class="text-sm font-medium">{{ item.label }}</span>
-                    <div v-if="!isExpanded" class="absolute left-full ml-2 px-2 py-1 bg-surface-variant text-text-main text-xs rounded-lg whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50 shadow-lg">
-                        {{ item.label }}
-                    </div>
-                </Link>
+                <template v-for="item in adminItems" :key="item.route">
+                    <a
+                        v-if="item.requiresConfirm"
+                        href="#"
+                        @click.prevent="openConfirm(item)"
+                        :class="[
+                            'sidebar-item group',
+                            isActive(item.route) ? 'active' : ''
+                        ]"
+                    >
+                        <svg class="w-5 h-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" :d="item.icon_svg" />
+                        </svg>
+                        <span v-if="isExpanded" class="text-sm font-medium">{{ item.label }}</span>
+                        <div v-if="!isExpanded" class="absolute left-full ml-2 px-2 py-1 bg-surface-variant text-text-main text-xs rounded-lg whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50 shadow-lg">
+                            {{ item.label }}
+                        </div>
+                    </a>
+                    <Link
+                        v-else
+                        :href="route(item.route)"
+                        :class="[
+                            'sidebar-item group',
+                            isActive(item.route) ? 'active' : ''
+                        ]"
+                    >
+                        <svg class="w-5 h-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" :d="item.icon_svg" />
+                        </svg>
+                        <span v-if="isExpanded" class="text-sm font-medium">{{ item.label }}</span>
+                        <div v-if="!isExpanded" class="absolute left-full ml-2 px-2 py-1 bg-surface-variant text-text-main text-xs rounded-lg whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50 shadow-lg">
+                            {{ item.label }}
+                        </div>
+                    </Link>
+                </template>
             </div>
         </nav>
 

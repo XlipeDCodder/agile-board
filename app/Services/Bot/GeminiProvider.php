@@ -9,6 +9,7 @@ class GeminiProvider implements BotProviderInterface
     public function __construct(
         private readonly string $apiKey,
         private readonly string $model = 'gemini-2.0-flash',
+        private readonly bool $verifySsl = true,
     ) {
     }
 
@@ -40,10 +41,13 @@ class GeminiProvider implements BotProviderInterface
             urlencode($this->apiKey),
         );
 
-        $response = Http::timeout(45)
-            ->acceptJson()
-            ->asJson()
-            ->post($url, $payload);
+        $request = Http::timeout(45)->acceptJson()->asJson();
+
+        if (! $this->verifySsl) {
+            $request = $request->withoutVerifying();
+        }
+
+        $response = $request->post($url, $payload);
 
         if ($response->failed()) {
             $errorMessage = $response->json('error.message') ?? $response->body();

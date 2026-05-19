@@ -19,8 +19,10 @@ class BotFactory
 
     public function make(string $provider, string $apiKey, string $model): BotProviderInterface
     {
+        $verifySsl = (bool) config('services.bot.verify_ssl', true);
+
         return match ($provider) {
-            'gemini' => new GeminiProvider($apiKey, $model),
+            'gemini' => new GeminiProvider($apiKey, $model, $verifySsl),
             default => throw new BotException("Provider não suportado: {$provider}"),
         };
     }
