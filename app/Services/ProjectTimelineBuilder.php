@@ -35,9 +35,11 @@ class ProjectTimelineBuilder
         $doneColumnId = \App\Models\Column::where('name', 'Feito')->value('id');
 
         $histories = ItemStatusHistory::whereIn('item_id', $itemIds)
-            ->whereNotNull('created_at')
+            ->orderBy('item_id')
             ->orderBy('created_at')
             ->get();
+        $historyByItem = $histories->groupBy('item_id');
+        $itemsById = $items->keyBy('id');
 
         $comments = Comment::with('user:id,name')
             ->whereIn('item_id', $itemIds)
@@ -57,12 +59,23 @@ class ProjectTimelineBuilder
         }
 
         foreach ($histories as $history) {
+            $item = $itemsById[$history->item_id] ?? null;
             $columnName = $columns[$history->column_id] ?? 'desconhecida';
-            // Quando o card entra na coluna "Feito", emitimos um evento de conclusão
-            // em vez de um simples "movido para".
+            // Fallback de timestamp para registros antigos com created_at NULL.
+            $when = $history->created_at?->toIso8601String() ?? $item?->updated_at?->toIso8601String();
+            if (! $when) {
+                continue;
+            }
             if ($doneColumnId && $history->column_id == $doneColumnId) {
+                // Só emite "concluído" para a ÚLTIMA entrada em Feito.
+                $lastDone = ($historyByItem[$history->item_id] ?? collect())
+                    ->where('column_id', $doneColumnId)
+                    ->last();
+                if ($lastDone && $lastDone->id !== $history->id) {
+                    continue;
+                }
                 $events[] = [
-                    'date' => $history->created_at?->toIso8601String(),
+                    'date' => $when,
                     'type' => 'item_completed',
                     'icon' => '✅',
                     'title' => "Card #{$history->item_id} concluído",
@@ -72,13 +85,34 @@ class ProjectTimelineBuilder
                 ];
             } else {
                 $events[] = [
-                    'date' => $history->created_at?->toIso8601String(),
+                    'date' => $when,
                     'type' => 'item_moved',
                     'icon' => '➡️',
                     'title' => "Card #{$history->item_id} movido para \"{$columnName}\"",
                     'description' => null,
                     'actor' => null,
                     'item_id' => $history->item_id,
+                ];
+            }
+        }
+
+        // Cobertura para cards atualmente em "Feito" sem histórico válido.
+        if ($doneColumnId) {
+            foreach ($items->where('column_id', $doneColumnId) as $item) {
+                $hasDoneHistory = ($historyByItem[$item->id] ?? collect())
+                    ->where('column_id', $doneColumnId)
+                    ->isNotEmpty();
+                if ($hasDoneHistory) {
+                    continue;
+                }
+                $events[] = [
+                    'date' => $item->updated_at?->toIso8601String(),
+                    'type' => 'item_completed',
+                    'icon' => '✅',
+                    'title' => "Card #{$item->id} concluído \"{$item->title}\"",
+                    'description' => '(timestamp aproximado — histórico não registrado)',
+                    'actor' => null,
+                    'item_id' => $item->id,
                 ];
             }
         }

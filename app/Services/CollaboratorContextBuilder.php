@@ -37,7 +37,6 @@ class CollaboratorContextBuilder
 
         $itemIdsRecent = $itemsRecent->pluck('id')->all();
         $historiesByItem = ItemStatusHistory::whereIn('item_id', $itemIdsRecent)
-            ->whereNotNull('created_at')
             ->orderBy('created_at')
             ->get()
             ->groupBy('item_id');
@@ -46,17 +45,20 @@ class CollaboratorContextBuilder
             $itemHistory = $historiesByItem[$item->id] ?? collect();
             $transitions = $itemHistory->map(fn ($h) => [
                 'column' => $columns[$h->column_id] ?? 'desconhecida',
-                'at' => $h->created_at?->toIso8601String(),
+                'at' => $h->created_at?->toIso8601String() ?? $item->updated_at?->toIso8601String(),
             ])->all();
 
             // Inferir conclusão: no sistema, um card é "concluído" quando está
             // atualmente na coluna "Feito". A data de conclusão é o timestamp
             // da entrada do histórico em que ele entrou nessa coluna pela última vez.
+            // Fallback: se o histórico não tem timestamp (registros antigos com
+            // created_at NULL), usa o updated_at do item como aproximação.
             $isCompleted = $doneColumnId && $item->column_id == $doneColumnId;
             $completedAtInferred = null;
             if ($isCompleted) {
                 $lastIntoDone = $itemHistory->where('column_id', $doneColumnId)->last();
-                $completedAtInferred = $lastIntoDone?->created_at?->toIso8601String();
+                $completedAtInferred = $lastIntoDone?->created_at?->toIso8601String()
+                    ?? $item->updated_at?->toIso8601String();
             }
 
             return [
@@ -172,6 +174,9 @@ class CollaboratorContextBuilder
             ->orderBy('item_id')
             ->orderBy('created_at')
             ->get(['item_id', 'column_id', 'created_at']);
+        // Nota: aqui mantemos whereNotNull porque o cálculo de "tempo médio
+        // em coluna" depende de dois timestamps consecutivos válidos — sem
+        // dados confiáveis, o resultado seria enganoso.
 
         $sumByColumn = [];
         $countByColumn = [];

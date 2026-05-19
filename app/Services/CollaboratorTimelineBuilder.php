@@ -83,32 +83,88 @@ class CollaboratorTimelineBuilder
             ];
         }
 
-        // Conclusões: para cada item criado pelo ou atribuído ao usuário,
-        // o evento de conclusão é a última entrada no histórico em que o item
-        // entrou na coluna "Feito".
+        // Transições e conclusões: usa o histórico de mudanças de coluna dos
+        // cards criados pelo ou atribuídos ao usuário. Movimentações para a
+        // coluna "Feito" viram evento de conclusão; demais viram "movido para".
+        $columns = Column::pluck('name', 'id')->all();
         $doneColumnId = Column::where('name', 'Feito')->value('id');
-        if ($doneColumnId) {
-            $relatedItemIds = $createdItems->pluck('id')->merge($assignedItemsList->pluck('id'))->unique();
-            $doneHistories = ItemStatusHistory::whereIn('item_id', $relatedItemIds)
-                ->where('column_id', $doneColumnId)
-                ->whereNotNull('created_at')
-                ->orderBy('created_at')
-                ->get()
-                ->groupBy('item_id');
 
-            $itemsById = $createdItems->keyBy('id')->union($assignedItemsList->keyBy('id'));
-            foreach ($doneHistories as $itemId => $history) {
-                $last = $history->last();
-                $item = $itemsById[$itemId] ?? null;
-                $events[] = [
-                    'date' => $last->created_at?->toIso8601String(),
-                    'type' => 'item_completed',
-                    'icon' => '✅',
-                    'title' => "Card #{$itemId} concluído".($item?->title ? " \"{$item->title}\"" : ''),
-                    'description' => null,
-                    'actor' => null,
-                    'item_id' => $itemId,
-                ];
+        $relatedItems = $createdItems->merge($assignedItemsList)->unique('id')->keyBy('id');
+        $relatedItemIds = $relatedItems->keys()->all();
+
+        if (! empty($relatedItemIds)) {
+            $allHistories = ItemStatusHistory::whereIn('item_id', $relatedItemIds)
+                ->orderBy('item_id')
+                ->orderBy('created_at')
+                ->get(['id', 'item_id', 'column_id', 'created_at']);
+
+            $historyByItem = $allHistories->groupBy('item_id');
+
+            foreach ($allHistories as $h) {
+                $item = $relatedItems[$h->item_id] ?? null;
+                $colName = $columns[$h->column_id] ?? 'desconhecida';
+
+                // Fallback de timestamp: muitos registros antigos têm created_at NULL
+                // (o $timestamps = false do model nunca preenchia). Para esses,
+                // usamos o updated_at do item como aproximação.
+                $when = $h->created_at?->toIso8601String() ?? $item?->updated_at?->toIso8601String();
+                if (! $when) {
+                    continue;
+                }
+
+                if ($doneColumnId && $h->column_id == $doneColumnId) {
+                    // Só emite o "concluído" para a ÚLTIMA entrada em Feito,
+                    // para não duplicar caso o card tenha sido reaberto e fechado.
+                    $lastDone = $historyByItem[$h->item_id]
+                        ->where('column_id', $doneColumnId)
+                        ->last();
+                    if ($lastDone && $lastDone->id !== $h->id) {
+                        continue;
+                    }
+                    $events[] = [
+                        'date' => $when,
+                        'type' => 'item_completed',
+                        'icon' => '✅',
+                        'title' => "Card #{$h->item_id} concluído".($item?->title ? " \"{$item->title}\"" : ''),
+                        'description' => null,
+                        'actor' => null,
+                        'item_id' => $h->item_id,
+                    ];
+                } else {
+                    $events[] = [
+                        'date' => $when,
+                        'type' => 'item_moved',
+                        'icon' => '➡️',
+                        'title' => "Card #{$h->item_id} movido para \"{$colName}\"".($item?->title ? " (\"{$item->title}\")" : ''),
+                        'description' => null,
+                        'actor' => null,
+                        'item_id' => $h->item_id,
+                    ];
+                }
+            }
+
+            // Cobertura para cards atualmente em "Feito" que NÃO têm nenhum
+            // ItemStatusHistory válido para essa coluna (bug histórico):
+            // emitir evento de conclusão usando o updated_at do item.
+            if ($doneColumnId) {
+                $itemsInDone = $relatedItems->where('column_id', $doneColumnId);
+                foreach ($itemsInDone as $item) {
+                    $hasDoneHistory = ($historyByItem[$item->id] ?? collect())
+                        ->where('column_id', $doneColumnId)
+                        ->isNotEmpty();
+                    if ($hasDoneHistory) {
+                        continue;
+                    }
+                    $events[] = [
+                        'date' => $item->updated_at?->toIso8601String(),
+                        'type' => 'item_completed',
+                        'icon' => '✅',
+                        'title' => "Card #{$item->id} concluído \"{$item->title}\"",
+                        'description' => '(timestamp aproximado — histórico não registrado)',
+                        'actor' => null,
+                        'item_id' => $item->id,
+                    ];
+                }
             }
         }
 
