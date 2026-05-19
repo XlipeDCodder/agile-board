@@ -1,6 +1,16 @@
 <script setup>
 import { ref, nextTick, computed } from 'vue';
 import axios from 'axios';
+import { marked } from 'marked';
+import DOMPurify from 'dompurify';
+
+marked.setOptions({ breaks: true, gfm: true });
+
+const renderMarkdown = (text) => {
+    if (!text) return '';
+    const raw = marked.parse(text);
+    return DOMPurify.sanitize(raw);
+};
 
 const props = defineProps({
     userId: { type: Number, required: true },
@@ -132,13 +142,13 @@ const onEnter = (e) => {
                 'flex',
                 msg.role === 'user' ? 'justify-end' : 'justify-start',
             ]">
-                <div :class="[
-                    'max-w-[85%] px-3 py-2 rounded-2xl text-sm whitespace-pre-wrap break-words',
-                    msg.role === 'user'
-                        ? 'bg-brand text-white rounded-br-sm'
-                        : 'bg-surface text-text-main border border-border-main rounded-bl-sm',
-                ]">
+                <div v-if="msg.role === 'user'"
+                    class="max-w-[85%] px-3 py-2 rounded-2xl rounded-br-sm text-sm whitespace-pre-wrap break-words bg-brand text-white">
                     {{ msg.content }}
+                </div>
+                <div v-else
+                    class="max-w-[85%] px-3 py-2 rounded-2xl rounded-bl-sm text-sm break-words bg-surface text-text-main border border-border-main icarus-markdown"
+                    v-html="renderMarkdown(msg.content)">
                 </div>
             </div>
             <div v-if="isLoading" class="flex justify-start">
@@ -179,3 +189,59 @@ const onEnter = (e) => {
         </div>
     </div>
 </template>
+
+<style scoped>
+.icarus-markdown :deep(p) { margin: 0 0 0.5rem 0; }
+.icarus-markdown :deep(p:last-child) { margin-bottom: 0; }
+.icarus-markdown :deep(strong) { font-weight: 700; }
+.icarus-markdown :deep(em) { font-style: italic; }
+.icarus-markdown :deep(ul),
+.icarus-markdown :deep(ol) { margin: 0.25rem 0 0.5rem 1.25rem; padding: 0; }
+.icarus-markdown :deep(ul) { list-style: disc; }
+.icarus-markdown :deep(ol) { list-style: decimal; }
+.icarus-markdown :deep(li) { margin: 0.125rem 0; }
+.icarus-markdown :deep(li > p) { margin: 0; }
+.icarus-markdown :deep(code) {
+    background: rgb(var(--color-surface-variant) / 0.6);
+    padding: 0.1rem 0.35rem;
+    border-radius: 0.3rem;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 0.85em;
+}
+.icarus-markdown :deep(pre) {
+    background: rgb(var(--color-surface-variant) / 0.6);
+    padding: 0.6rem;
+    border-radius: 0.5rem;
+    overflow-x: auto;
+    margin: 0.4rem 0;
+}
+.icarus-markdown :deep(pre code) { background: transparent; padding: 0; }
+.icarus-markdown :deep(blockquote) {
+    border-left: 3px solid rgb(var(--color-brand));
+    padding-left: 0.6rem;
+    margin: 0.4rem 0;
+    color: rgb(var(--color-text-muted));
+}
+.icarus-markdown :deep(a) {
+    color: rgb(var(--color-brand));
+    text-decoration: underline;
+}
+.icarus-markdown :deep(table) {
+    border-collapse: collapse;
+    margin: 0.4rem 0;
+}
+.icarus-markdown :deep(th),
+.icarus-markdown :deep(td) {
+    border: 1px solid rgb(var(--color-border-main));
+    padding: 0.25rem 0.5rem;
+}
+.icarus-markdown :deep(h1),
+.icarus-markdown :deep(h2),
+.icarus-markdown :deep(h3) {
+    font-weight: 700;
+    margin: 0.5rem 0 0.25rem 0;
+}
+.icarus-markdown :deep(h1) { font-size: 1.1em; }
+.icarus-markdown :deep(h2) { font-size: 1.05em; }
+.icarus-markdown :deep(h3) { font-size: 1em; }
+</style>

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\Column;
 use App\Models\Item;
 use App\Models\Project;
 use App\Models\TimeEntry;
@@ -24,9 +25,13 @@ class ReportController extends Controller
 
     public function project(Project $project, ProjectTimelineBuilder $builder): Response
     {
+        $doneColumnId = Column::where('name', 'Feito')->value('id');
         $items = Item::where('project_id', $project->id)->get();
         $itemIds = $items->pluck('id');
         $totalMinutes = (int) TimeEntry::whereIn('item_id', $itemIds)->sum('minutes');
+        $itemsCompleted = $doneColumnId
+            ? $items->where('column_id', $doneColumnId)->count()
+            : 0;
 
         return Inertia::render('Admin/Reports/Project', [
             'project' => [
@@ -40,7 +45,7 @@ class ReportController extends Controller
             ],
             'stats' => [
                 'items_total' => $items->count(),
-                'items_completed' => $items->whereNotNull('completed_at')->count(),
+                'items_completed' => $itemsCompleted,
                 'hours_logged' => round($totalMinutes / 60, 1),
             ],
             'projects' => Project::orderBy('name')->get(['id', 'name']),
@@ -50,13 +55,24 @@ class ReportController extends Controller
 
     public function collaborator(User $user, CollaboratorTimelineBuilder $builder): Response
     {
+        $doneColumnId = Column::where('name', 'Feito')->value('id');
         $createdTotal = Item::where('creator_id', $user->id)->count();
-        $assignedActive = Item::whereHas('assignees', fn ($q) => $q->where('users.id', $user->id))
-            ->whereNull('completed_at')->count();
+
+        $assignedActiveQuery = Item::whereHas('assignees', fn ($q) => $q->where('users.id', $user->id));
+        if ($doneColumnId) {
+            $assignedActiveQuery->where('column_id', '!=', $doneColumnId);
+        }
+        $assignedActive = $assignedActiveQuery->count();
+
         $totalMinutes = (int) TimeEntry::where('user_id', $user->id)->sum('minutes');
-        $projectsCount = Item::whereHas('assignees', fn ($q) => $q->where('users.id', $user->id))
-            ->orWhere('creator_id', $user->id)
-            ->distinct('project_id')->count('project_id');
+
+        $projectsCount = Item::where(function ($q) use ($user) {
+                $q->whereHas('assignees', fn ($a) => $a->where('users.id', $user->id))
+                    ->orWhere('creator_id', $user->id);
+            })
+            ->whereNotNull('project_id')
+            ->distinct('project_id')
+            ->count('project_id');
 
         return Inertia::render('Admin/Reports/Collaborator', [
             'collaborator' => [

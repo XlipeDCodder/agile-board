@@ -22,6 +22,7 @@ class CollaboratorContextBuilder
         $now = Carbon::now();
         $cutoff = $now->copy()->subDays(90);
         $columns = Column::pluck('name', 'id')->all();
+        $doneColumnId = Column::where('name', 'Feito')->value('id');
 
         $itemsRecent = Item::with(['project:id,name', 'column:id,name'])
             ->whereNull('parent_id')
@@ -41,11 +42,22 @@ class CollaboratorContextBuilder
             ->get()
             ->groupBy('item_id');
 
-        $itemsPayload = $itemsRecent->map(function (Item $item) use ($historiesByItem, $columns, $user) {
-            $transitions = ($historiesByItem[$item->id] ?? collect())->map(fn ($h) => [
+        $itemsPayload = $itemsRecent->map(function (Item $item) use ($historiesByItem, $columns, $user, $doneColumnId) {
+            $itemHistory = $historiesByItem[$item->id] ?? collect();
+            $transitions = $itemHistory->map(fn ($h) => [
                 'column' => $columns[$h->column_id] ?? 'desconhecida',
                 'at' => $h->created_at?->toIso8601String(),
             ])->all();
+
+            // Inferir conclusão: no sistema, um card é "concluído" quando está
+            // atualmente na coluna "Feito". A data de conclusão é o timestamp
+            // da entrada do histórico em que ele entrou nessa coluna pela última vez.
+            $isCompleted = $doneColumnId && $item->column_id == $doneColumnId;
+            $completedAtInferred = null;
+            if ($isCompleted) {
+                $lastIntoDone = $itemHistory->where('column_id', $doneColumnId)->last();
+                $completedAtInferred = $lastIntoDone?->created_at?->toIso8601String();
+            }
 
             return [
                 'id' => $item->id,
@@ -56,7 +68,8 @@ class CollaboratorContextBuilder
                 'current_column' => $item->column?->name,
                 'project' => $item->project?->name,
                 'created_at' => $item->created_at?->toIso8601String(),
-                'completed_at' => $item->completed_at ? (string) $item->completed_at : null,
+                'is_completed' => $isCompleted,
+                'completed_at_inferred' => $completedAtInferred,
                 'is_creator' => $item->creator_id === $user->id,
                 'transitions' => $transitions,
             ];
@@ -77,7 +90,13 @@ class CollaboratorContextBuilder
 
         $totalCreated = Item::where('creator_id', $user->id)->count();
         $totalAssigned = Item::whereHas('assignees', fn ($q) => $q->where('users.id', $user->id))->count();
-        $totalCompletedAsCreator = Item::where('creator_id', $user->id)->whereNotNull('completed_at')->count();
+        $totalCompletedAsCreator = $doneColumnId
+            ? Item::where('creator_id', $user->id)->where('column_id', $doneColumnId)->count()
+            : 0;
+        $totalCompletedAsAssignee = $doneColumnId
+            ? Item::whereHas('assignees', fn ($q) => $q->where('users.id', $user->id))
+                ->where('column_id', $doneColumnId)->count()
+            : 0;
         $totalMinutes = (int) TimeEntry::where('user_id', $user->id)->sum('minutes');
 
         $minutesByProject = TimeEntry::where('time_entries.user_id', $user->id)
@@ -118,10 +137,12 @@ class CollaboratorContextBuilder
             ],
             'items_recent_90d' => $itemsPayload,
             'comments_recent_90d' => $commentsRecent,
+            'completion_semantics' => 'Um card é considerado concluído quando sua coluna atual é "Feito". A data de conclusão é o timestamp da última entrada do histórico em que ele entrou na coluna "Feito" (campo completed_at_inferred em cada item).',
             'aggregates_all_time' => [
                 'items_created_total' => $totalCreated,
                 'items_assigned_total' => $totalAssigned,
                 'items_completed_as_creator' => $totalCompletedAsCreator,
+                'items_completed_as_assignee' => $totalCompletedAsAssignee,
                 'total_minutes_logged' => $totalMinutes,
                 'total_hours_logged' => round($totalMinutes / 60, 1),
                 'minutes_by_project' => $minutesByProject,

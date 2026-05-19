@@ -2,8 +2,10 @@
 
 namespace App\Services;
 
+use App\Models\Column;
 use App\Models\Comment;
 use App\Models\Item;
+use App\Models\ItemStatusHistory;
 use App\Models\TimeEntry;
 use App\Models\User;
 
@@ -40,19 +42,6 @@ class CollaboratorTimelineBuilder
                 'item_id' => $item->id,
             ];
 
-            if ($item->completed_at) {
-                $events[] = [
-                    'date' => $item->completed_at instanceof \Carbon\Carbon
-                        ? $item->completed_at->toIso8601String()
-                        : (string) $item->completed_at,
-                    'type' => 'item_completed',
-                    'icon' => '✅',
-                    'title' => "Card #{$item->id} concluído",
-                    'description' => $item->title,
-                    'actor' => null,
-                    'item_id' => $item->id,
-                ];
-            }
         }
 
         $assignedItemsList = Item::whereHas('assignees', fn ($q) => $q->where('users.id', $user->id))
@@ -92,6 +81,35 @@ class CollaboratorTimelineBuilder
                 'actor' => $user->name,
                 'item_id' => $comment->item_id,
             ];
+        }
+
+        // Conclusões: para cada item criado pelo ou atribuído ao usuário,
+        // o evento de conclusão é a última entrada no histórico em que o item
+        // entrou na coluna "Feito".
+        $doneColumnId = Column::where('name', 'Feito')->value('id');
+        if ($doneColumnId) {
+            $relatedItemIds = $createdItems->pluck('id')->merge($assignedItemsList->pluck('id'))->unique();
+            $doneHistories = ItemStatusHistory::whereIn('item_id', $relatedItemIds)
+                ->where('column_id', $doneColumnId)
+                ->whereNotNull('created_at')
+                ->orderBy('created_at')
+                ->get()
+                ->groupBy('item_id');
+
+            $itemsById = $createdItems->keyBy('id')->union($assignedItemsList->keyBy('id'));
+            foreach ($doneHistories as $itemId => $history) {
+                $last = $history->last();
+                $item = $itemsById[$itemId] ?? null;
+                $events[] = [
+                    'date' => $last->created_at?->toIso8601String(),
+                    'type' => 'item_completed',
+                    'icon' => '✅',
+                    'title' => "Card #{$itemId} concluído".($item?->title ? " \"{$item->title}\"" : ''),
+                    'description' => null,
+                    'actor' => null,
+                    'item_id' => $itemId,
+                ];
+            }
         }
 
         $entriesByDate = TimeEntry::where('user_id', $user->id)

@@ -32,6 +32,7 @@ class ProjectTimelineBuilder
         $itemIds = $items->pluck('id');
 
         $columns = \App\Models\Column::pluck('name', 'id');
+        $doneColumnId = \App\Models\Column::where('name', 'Feito')->value('id');
 
         $histories = ItemStatusHistory::whereIn('item_id', $itemIds)
             ->whereNotNull('created_at')
@@ -53,32 +54,33 @@ class ProjectTimelineBuilder
                 'item_id' => $item->id,
             ];
 
-            if ($item->completed_at) {
-                $events[] = [
-                    'date' => $item->completed_at instanceof \Carbon\Carbon
-                        ? $item->completed_at->toIso8601String()
-                        : (string) $item->completed_at,
-                    'type' => 'item_completed',
-                    'icon' => '✅',
-                    'title' => "Card #{$item->id} concluído",
-                    'description' => $item->title,
-                    'actor' => null,
-                    'item_id' => $item->id,
-                ];
-            }
         }
 
         foreach ($histories as $history) {
             $columnName = $columns[$history->column_id] ?? 'desconhecida';
-            $events[] = [
-                'date' => $history->created_at?->toIso8601String(),
-                'type' => 'item_moved',
-                'icon' => '➡️',
-                'title' => "Card #{$history->item_id} movido para \"{$columnName}\"",
-                'description' => null,
-                'actor' => null,
-                'item_id' => $history->item_id,
-            ];
+            // Quando o card entra na coluna "Feito", emitimos um evento de conclusão
+            // em vez de um simples "movido para".
+            if ($doneColumnId && $history->column_id == $doneColumnId) {
+                $events[] = [
+                    'date' => $history->created_at?->toIso8601String(),
+                    'type' => 'item_completed',
+                    'icon' => '✅',
+                    'title' => "Card #{$history->item_id} concluído",
+                    'description' => null,
+                    'actor' => null,
+                    'item_id' => $history->item_id,
+                ];
+            } else {
+                $events[] = [
+                    'date' => $history->created_at?->toIso8601String(),
+                    'type' => 'item_moved',
+                    'icon' => '➡️',
+                    'title' => "Card #{$history->item_id} movido para \"{$columnName}\"",
+                    'description' => null,
+                    'actor' => null,
+                    'item_id' => $history->item_id,
+                ];
+            }
         }
 
         foreach ($comments as $comment) {
