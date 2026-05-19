@@ -9,6 +9,9 @@ use App\Http\Controllers\BacklogController;
 use App\Http\Controllers\CompletedController;
 use App\Http\Controllers\ColumnController;
 use App\Http\Controllers\Admin\ColumnManagementController;
+use App\Http\Controllers\Admin\ReportController;
+use App\Http\Controllers\Admin\BotConfigController;
+use App\Http\Controllers\Admin\IcarusController;
 use App\Http\Controllers\CommentController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\DashboardController;
@@ -49,6 +52,17 @@ Route::middleware('auth')->group(function () {
     Route::post('/comments', [CommentController::class, 'store'])->name('comments.store');
     Route::resource('projects', \App\Http\Controllers\ProjectController::class)->only(['index', 'store', 'update', 'destroy']);
     Route::resource('time-entries', \App\Http\Controllers\TimeEntryController::class)->only(['index', 'store', 'update', 'destroy']);
+});
+
+Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(function () {
+    Route::get('reports', [ReportController::class, 'index'])->name('reports.index');
+    Route::get('reports/project/{project}', [ReportController::class, 'project'])->name('reports.project');
+    Route::get('reports/collaborator/{user}', [ReportController::class, 'collaborator'])->name('reports.collaborator');
+    Route::post('reports/collaborator/{user}/chat', [IcarusController::class, 'chat'])
+        ->middleware('throttle:10,1')->name('icarus.chat');
+    Route::get('bot-config', [BotConfigController::class, 'index'])->name('bot-config.index');
+    Route::put('bot-config', [BotConfigController::class, 'update'])->name('bot-config.update');
+    Route::post('bot-config/test', [BotConfigController::class, 'test'])->name('bot-config.test');
 });
 
 require __DIR__.'/auth.php';
