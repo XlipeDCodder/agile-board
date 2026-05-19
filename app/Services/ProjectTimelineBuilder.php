@@ -118,6 +118,45 @@ class ProjectTimelineBuilder
             }
         }
 
+        // Subtarefas dos cards do projeto: criação (sempre) e conclusão
+        // (quando completed_at for preenchido pelo toggle do checkbox).
+        $subtasks = Item::whereNotNull('parent_id')
+            ->whereIn('parent_id', $itemIds)
+            ->with('creator:id,name', 'parent:id,title')
+            ->get();
+
+        foreach ($subtasks as $subtask) {
+            $parentRef = $subtask->parent
+                ? "card #{$subtask->parent->id} \"{$subtask->parent->title}\""
+                : 'card pai desconhecido';
+            $events[] = [
+                'date' => $subtask->created_at?->toIso8601String(),
+                'type' => 'subtask_created',
+                'icon' => '➕',
+                'title' => "Subtarefa \"{$subtask->title}\" adicionada ao {$parentRef}",
+                'description' => null,
+                'actor' => $subtask->creator?->name,
+                'item_id' => $subtask->id,
+                'parent_id' => $subtask->parent_id,
+            ];
+
+            if ($subtask->completed_at) {
+                $completedAt = $subtask->completed_at instanceof \Carbon\Carbon
+                    ? $subtask->completed_at->toIso8601String()
+                    : (string) $subtask->completed_at;
+                $events[] = [
+                    'date' => $completedAt,
+                    'type' => 'subtask_completed',
+                    'icon' => '✔️',
+                    'title' => "Subtarefa \"{$subtask->title}\" do {$parentRef} concluída",
+                    'description' => null,
+                    'actor' => null,
+                    'item_id' => $subtask->id,
+                    'parent_id' => $subtask->parent_id,
+                ];
+            }
+        }
+
         foreach ($comments as $comment) {
             $body = mb_strlen($comment->body) > 200
                 ? mb_substr($comment->body, 0, 200).'…'

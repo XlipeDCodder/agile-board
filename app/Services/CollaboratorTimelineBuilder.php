@@ -65,6 +65,48 @@ class CollaboratorTimelineBuilder
             ];
         }
 
+        // Subtarefas criadas pelo usuário: emite criação e, se houver,
+        // conclusão (subtarefas usam o campo completed_at de verdade,
+        // diferente dos cards).
+        $createdSubtasks = Item::whereNotNull('parent_id')
+            ->where('creator_id', $user->id)
+            ->with('parent:id,title,project_id')
+            ->with('parent.project:id,name')
+            ->get();
+
+        foreach ($createdSubtasks as $subtask) {
+            $parentRef = $subtask->parent
+                ? "card #{$subtask->parent->id} \"{$subtask->parent->title}\""
+                : 'card pai desconhecido';
+
+            $events[] = [
+                'date' => $subtask->created_at?->toIso8601String(),
+                'type' => 'subtask_created',
+                'icon' => '➕',
+                'title' => "Criou a subtarefa \"{$subtask->title}\" no {$parentRef}",
+                'description' => $subtask->parent?->project?->name ? "Projeto: {$subtask->parent->project->name}" : null,
+                'actor' => $user->name,
+                'item_id' => $subtask->id,
+                'parent_id' => $subtask->parent_id,
+            ];
+
+            if ($subtask->completed_at) {
+                $completedAt = $subtask->completed_at instanceof \Carbon\Carbon
+                    ? $subtask->completed_at->toIso8601String()
+                    : (string) $subtask->completed_at;
+                $events[] = [
+                    'date' => $completedAt,
+                    'type' => 'subtask_completed',
+                    'icon' => '✔️',
+                    'title' => "Subtarefa \"{$subtask->title}\" concluída ({$parentRef})",
+                    'description' => null,
+                    'actor' => null,
+                    'item_id' => $subtask->id,
+                    'parent_id' => $subtask->parent_id,
+                ];
+            }
+        }
+
         $comments = Comment::with('item:id,title')
             ->where('user_id', $user->id)
             ->get();

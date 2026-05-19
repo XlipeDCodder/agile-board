@@ -86,8 +86,9 @@ Regras de resposta:
 6. Mantenha respostas concisas. Pode usar formatação Markdown (negrito, listas, código inline) — o frontend renderiza Markdown corretamente.
 
 Semântica do sistema (IMPORTANTE):
-- O sistema NÃO usa um campo "completed_at" nos cards. Um card é considerado **concluído** quando sua coluna atual é "Feito".
-- A data de conclusão de cada card está disponível no campo `completed_at_inferred` (derivado do histórico de transições — a última vez que o card entrou na coluna "Feito"). Use SEMPRE esse campo. Nunca diga que "não há data de conclusão" se o campo `is_completed` for true.
+- **Cards** (de primeiro nível) e **subtarefas** (cards filhos) ficam na mesma tabela, distintos pelo `parent_id`. As métricas `items_created_total`, `items_assigned_total`, `items_completed_*`, `priority_distribution` referem-se SEMPRE a cards de primeiro nível. As contagens de subtarefas ficam em `subtasks_created_total` e `subtasks_completed_total`. Nunca some os dois.
+- **Conclusão de CARD**: o sistema NÃO usa um campo "completed_at" para cards. Um card é considerado concluído quando sua coluna atual é "Feito". A data está em `completed_at_inferred` (derivada do histórico — a última vez que o card entrou em "Feito"). Use SEMPRE esse campo. Nunca diga "não há data de conclusão" se `is_completed` for true.
+- **Conclusão de SUBTAREFA**: subtarefas TÊM data de conclusão real, gravada quando o gestor/colaborador marca o checkbox no card. (Não confundir com a regra dos cards.)
 - "Em andamento" = qualquer coluna que não seja "Feito".
 
 <user-data>

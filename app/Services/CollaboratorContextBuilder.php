@@ -129,6 +129,15 @@ class CollaboratorContextBuilder
             ->pluck('total', 'priority')
             ->all();
 
+        // Subtarefas têm contagem separada — não são "cards".
+        $subtasksCreated = Item::whereNotNull('parent_id')
+            ->where('creator_id', $user->id)
+            ->count();
+        $subtasksCompleted = Item::whereNotNull('parent_id')
+            ->where('creator_id', $user->id)
+            ->whereNotNull('completed_at')
+            ->count();
+
         return [
             'collaborator' => [
                 'id' => $user->id,
@@ -150,6 +159,8 @@ class CollaboratorContextBuilder
                 'items_assigned_total' => $totalAssigned,
                 'items_completed_as_creator' => $totalCompletedAsCreator,
                 'items_completed_as_assignee' => $totalCompletedAsAssignee,
+                'subtasks_created_total' => $subtasksCreated,
+                'subtasks_completed_total' => $subtasksCompleted,
                 'total_minutes_logged' => $totalMinutes,
                 'total_hours_logged' => round($totalMinutes / 60, 1),
                 'minutes_by_project' => $minutesByProject,

@@ -24,6 +24,7 @@ class SubtaskController extends Controller
             'title' => $validated['title'],
             'parent_id' => $parentItem->id,
             'column_id' => $parentItem->column_id,
+            'project_id' => $parentItem->project_id,
             'creator_id' => Auth::id(),
             'type' => 'task',
         ]);

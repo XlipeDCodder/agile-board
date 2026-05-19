@@ -12,6 +12,8 @@ const eventStyles = {
     item_completed: { dot: 'bg-emerald-500', ring: 'ring-emerald-500/20' },
     item_moved: { dot: 'bg-indigo-500', ring: 'ring-indigo-500/20' },
     item_assigned: { dot: 'bg-purple-500', ring: 'ring-purple-500/20' },
+    subtask_created: { dot: 'bg-cyan-400', ring: 'ring-cyan-400/20' },
+    subtask_completed: { dot: 'bg-teal-500', ring: 'ring-teal-500/20' },
     comment: { dot: 'bg-slate-400', ring: 'ring-slate-400/20' },
     time_logged: { dot: 'bg-amber-500', ring: 'ring-amber-500/20' },
     user_joined: { dot: 'bg-brand', ring: 'ring-brand/20' },
