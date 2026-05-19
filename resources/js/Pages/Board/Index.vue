@@ -34,17 +34,21 @@ const newCommentForm = useForm({
     files: [],
 });
 
-onMounted(() => { 
-    boardColumns.value = props.columns; 
-    
+let reloadTimeout = null;
+const debouncedReload = () => {
+    clearTimeout(reloadTimeout);
+    reloadTimeout = setTimeout(() => {
+        router.reload({ only: ['columns'], preserveScroll: true });
+    }, 250);
+};
+
+onMounted(() => {
+    boardColumns.value = props.columns;
+
     if (window.Echo) {
         window.Echo.channel('board')
-            .listen('.item.moved', (e) => {
-                router.reload({ only: ['columns'] });
-            })
-            .listen('.item.created', (e) => {
-                router.reload({ only: ['columns'] });
-            });
+            .listen('.item.moved', debouncedReload)
+            .listen('.item.created', debouncedReload);
     }
 });
 
@@ -69,7 +73,11 @@ watch(() => props.columns, (newColumns) => {
 
 function onDragEnd() {
     const reorderedData = boardColumns.value.map(c => ({ id: c.id, items: c.items.map(i => i.id) }));
-    router.patch(route('board.reorder'), { columns: reorderedData }, { preserveScroll: true });
+    router.patch(route('board.reorder'), { columns: reorderedData }, {
+        preserveScroll: true,
+        preserveState: true,
+        only: [],
+    });
 }
 
 const openCreateItemModal = (columnId) => {

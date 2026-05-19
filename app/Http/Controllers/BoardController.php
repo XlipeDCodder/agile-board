@@ -50,15 +50,15 @@ class BoardController extends Controller
         $doneColumn = Column::where('name', 'Feito')->first();
         $doneColumnId = $doneColumn ? $doneColumn->id : null;
 
-        DB::transaction(function () use ($request, $doneColumnId) {
+        $movedItems = [];
+
+        DB::transaction(function () use ($request, $doneColumnId, &$movedItems) {
             foreach ($request->columns as $columnData) {
                 foreach ($columnData['items'] as $order => $itemId) {
                     $item = Item::find($itemId);
                     if ($item) {
-                        
-                        $oldColumnId = $item->column_id;
 
-                        $oldOrder = $item->order_in_column;
+                        $oldColumnId = $item->column_id;
 
                         $item->fill([
                             'column_id' => $columnData['id'],
@@ -67,10 +67,10 @@ class BoardController extends Controller
 
                         if ($item->isDirty(['column_id', 'order_in_column'])) {
                             $item->save();
-                            event(new ItemMoved($item));
+                            $movedItems[] = $item;
                         }
 
-                        
+
                         if ($oldColumnId != $item->column_id) {
                             ItemStatusHistory::create([
                                 'item_id' => $item->id,
@@ -85,6 +85,10 @@ class BoardController extends Controller
                 }
             }
         });
+
+        foreach ($movedItems as $item) {
+            broadcast(new ItemMoved($item))->toOthers();
+        }
 
         return back();
     }
