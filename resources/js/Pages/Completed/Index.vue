@@ -9,10 +9,13 @@ import Multiselect from 'vue-multiselect';
 const props = defineProps({
     items: Object,
     users: Array,
+    projects: Array,
 });
 
 const showItemModal = ref(false);
 const expandedImage = ref(null);
+const activeTab = ref('details');
+const pokerValues = [1, 2, 3, 5, 8, 13, 20];
 
 watch(() => props.items, (newItems) => {
     if (showItemModal.value && itemForm.id) {
@@ -27,7 +30,7 @@ watch(() => props.items, (newItems) => {
 const itemForm = useForm({
     id: null, title: '', description: '', type: 'task',
     priority: 'Média', assignee_ids: [], due_date: null,
-    column_id: null, estimation: null, subtasks: [], comments: [],
+    column_id: null, project_id: null, estimation: null, subtasks: [], comments: [],
 });
 
 const newSubtaskForm = useForm({
@@ -50,11 +53,13 @@ const openEditItemModal = (item) => {
     itemForm.assignee_ids = item.assignees.map(user => user.id);
     itemForm.due_date = item.due_date;
     itemForm.column_id = item.column_id;
+    itemForm.project_id = item.project_id;
     itemForm.estimation = item.estimation;
     itemForm.subtasks = item.subtasks || [];
     itemForm.comments = item.comments || [];
     newSubtaskForm.parent_id = item.id;
     newCommentForm.item_id = item.id;
+    activeTab.value = 'details';
     showItemModal.value = true;
 };
 
@@ -74,7 +79,6 @@ const addSubtask = () => {
         preserveState: true,
         onSuccess: () => {
             newSubtaskForm.reset('title');
-            closeModal();
         },
     });
 };
@@ -90,15 +94,19 @@ const addComment = () => {
     newCommentForm.post(route('comments.store'), {
         preserveScroll: true,
         preserveState: true,
+        forceFormData: true,
         onSuccess: () => {
-             newCommentForm.reset('body', 'files');
-             document.getElementById('completed-comment-files').value = null;
+            newCommentForm.reset('body', 'files');
+            const fileInput = document.getElementById('completed-comment-files');
+            if (fileInput) fileInput.value = '';
         }
     });
 };
 
 const isBug = (item) => item.type === 'bug';
 </script>
+
+<style src="vue-multiselect/dist/vue-multiselect.css"></style>
 
 <template>
     <Head title="Itens Concluídos" />
@@ -153,81 +161,113 @@ const isBug = (item) => item.type === 'bug';
             </div>
         </div>
 
-        <Modal :show="showItemModal" @close="closeModal">
-             <div class="p-6 bg-secondary text-text-primary">
-                <h2 class="text-2xl font-bold mb-4">Editar Item</h2>
-                <form @submit.prevent="saveItem">
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div class="md:col-span-2"><label class="block text-sm font-medium">Título</label><input type="text" v-model="itemForm.title" class="mt-1 block w-full rounded-md bg-primary border-accent text-text-primary shadow-sm"></div>
-                        <div class="md:col-span-2"><label class="block text-sm font-medium">Descrição</label><textarea v-model="itemForm.description" rows="3" class="mt-1 block w-full rounded-md bg-primary border-accent text-text-primary shadow-sm"></textarea></div>
-                        
-                        <div class="md:col-span-2">
-                            <label class="block text-sm font-medium">Responsáveis</label>
-                            <Multiselect
-                                v-model="itemForm.assignee_ids"
-                                :options="users.map(user => user.id)"
-                                :custom-label="opt => users.find(user => user.id === opt).name"
-                                :multiple="true"
-                                placeholder="Selecione os responsáveis"
-                                selectLabel="Clique para selecionar"
-                                deselectLabel="Clique para remover"
-                                selectedLabel="Selecionado"
-                                class="mt-1"
-                            ></Multiselect>
-                        </div>
+        <Modal :show="showItemModal" @close="closeModal" max-width="3xl">
+            <div class="p-6 bg-surface-variant max-h-[90vh] overflow-y-auto">
+                <h2 class="text-2xl font-bold mb-6 text-text-main">✅ Item Concluído</h2>
 
-                        <div><label class="block text-sm font-medium">Prioridade</label><select v-model="itemForm.priority" class="mt-1 block w-full rounded-md bg-primary border-accent text-text-primary shadow-sm"><option>Baixa</option><option>Média</option><option>Alta</option><option>Crítica</option></select></div>
-                        <div><label class="block text-sm font-medium">Tipo</label><select v-model="itemForm.type" class="mt-1 block w-full rounded-md bg-primary border-accent text-text-primary shadow-sm"><option value="task">Tarefa</option><option value="bug">Bug</option></select></div>
-                        <div class="md:col-span-2"><label class="block text-sm font-medium">Estimativa</label><select v-model="itemForm.estimation" class="mt-1 block w-full rounded-md bg-primary border-accent text-text-primary shadow-sm"><option :value="null">Não estimado</option><option v-for="p in [1,2,3,5,8,13,20]" :value="p">{{p}} Pontos</option></select></div>
-                    </div>
-                    <div class="mt-6 flex justify-end space-x-4"><button type="button" @click="closeModal" class="px-4 py-2 bg-accent text-primary rounded-md">Cancelar</button><button type="submit" :disabled="itemForm.processing" class="px-4 py-2 bg-blue-600 text-white rounded-md">Salvar</button></div>
-                </form>
-
-                <div v-if="itemForm.id" class="mt-6 border-t border-accent pt-4">
-                    <h3 class="text-lg font-bold mb-2">Subtarefas</h3>
-                    <div class="space-y-2"><div v-for="subtask in itemForm.subtasks" :key="subtask.id" class="flex items-center"><input type="checkbox" :checked="!!subtask.completed_at" @change="toggleSubtask(subtask)" class="h-4 w-4 rounded border-accent bg-primary text-indigo-600 focus:ring-indigo-500"><span class="ml-3 text-sm" :class="{'line-through text-text-secondary': subtask.completed_at}">{{ subtask.title }}</span></div></div>
-                    <form @submit.prevent="addSubtask" class="mt-4 flex items-center space-x-2"><input type="text" v-model="newSubtaskForm.title" placeholder="Adicionar nova subtarefa..." class="flex-grow block w-full rounded-md bg-primary border-accent text-text-primary shadow-sm text-sm"><button type="submit" :disabled="newSubtaskForm.processing" class="px-3 py-1.5 bg-green-500 text-white rounded-md text-sm">Adicionar</button></form>
+                <div v-if="itemForm.id" class="flex gap-2 mb-6 border-b border-border-main">
+                    <button @click="activeTab = 'details'" :class="['px-4 py-2 font-medium border-b-2 transition', activeTab === 'details' ? 'border-brand text-brand' : 'border-transparent text-text-muted hover:text-text-main']">📝 Detalhes</button>
+                    <button @click="activeTab = 'subtasks'" :class="['px-4 py-2 font-medium border-b-2 transition', activeTab === 'subtasks' ? 'border-brand text-brand' : 'border-transparent text-text-muted hover:text-text-main']">📋 Subtarefas ({{ itemForm.subtasks?.filter(s => s.completed_at).length || 0 }}/{{ itemForm.subtasks?.length || 0 }})</button>
+                    <button @click="activeTab = 'comments'" :class="['px-4 py-2 font-medium border-b-2 transition', activeTab === 'comments' ? 'border-brand text-brand' : 'border-transparent text-text-muted hover:text-text-main']">💬 Comentários ({{ itemForm.comments?.length || 0 }})</button>
                 </div>
 
-                <div v-if="itemForm.id" class="mt-6 border-t border-accent pt-4">
-                    <h3 class="text-lg font-bold mb-4">Comentários</h3>
-                    <form @submit.prevent="addComment" class="mb-4">
-                        <textarea v-model="newCommentForm.body" rows="3" placeholder="Adicionar um comentário..." class="w-full rounded-md bg-primary border-accent text-text-primary shadow-sm"></textarea>
-                        <div v-if="newCommentForm.errors.body" class="text-red-500 text-xs">{{ newCommentForm.errors.body }}</div>
-                        <div class="mt-2">
-                             <label class="block text-sm font-medium text-text-secondary mb-1">Anexar arquivos</label>
-                             <input type="file" id="completed-comment-files" @input="newCommentForm.files = $event.target.files" multiple class="block w-full text-sm text-text-secondary file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-text-primary hover:file:bg-secondary"/>
+                <form v-if="activeTab === 'details'" @submit.prevent="saveItem" class="space-y-6">
+                    <div><label class="block text-sm font-bold text-text-main mb-2">Título *</label><input type="text" v-model="itemForm.title" class="input-field w-full" required></div>
+                    <div><label class="block text-sm font-bold text-text-main mb-2">Descrição</label><textarea v-model="itemForm.description" rows="4" class="input-field w-full"></textarea></div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div><label class="block text-sm font-bold text-text-main mb-2">Tipo</label><select v-model="itemForm.type" class="input-field w-full"><option value="task">Tarefa</option><option value="bug">Bug</option></select></div>
+                        <div><label class="block text-sm font-bold text-text-main mb-2">Prioridade</label><select v-model="itemForm.priority" class="input-field w-full"><option>Baixa</option><option>Média</option><option>Alta</option><option>Crítica</option></select></div>
+                        <div class="md:col-span-2">
+                            <label class="block text-sm font-bold text-text-main mb-2">Projeto</label>
+                            <select v-model="itemForm.project_id" class="input-field w-full">
+                                <option :value="null">— sem projeto —</option>
+                                <option v-for="proj in projects" :key="proj.id" :value="proj.id">{{ proj.name }}</option>
+                            </select>
                         </div>
-                        <button type="submit" :disabled="newCommentForm.processing" class="mt-2 px-4 py-2 bg-blue-600 text-white rounded-md text-sm">Comentar</button>
-                    </form>
-                    <div class="space-y-4 max-h-60 overflow-y-auto">
-                        <div v-for="comment in itemForm.comments" :key="comment.id" class="flex items-start space-x-3">
-                            <div class="flex-shrink-0">
-                                <span class="inline-flex items-center justify-center h-8 w-8 rounded-full bg-primary">
-                                    <span class="text-sm font-medium leading-none text-text-primary">{{ comment.user.name.charAt(0) }}</span>
-                                </span>
+                        <div class="md:col-span-2">
+                            <label class="block text-sm font-bold text-text-main mb-2">Dificuldade <span class="font-normal text-text-muted">(Planning Poker)</span></label>
+                            <div class="flex flex-wrap gap-2">
+                                <button v-for="value in pokerValues" :key="value" type="button"
+                                    @click="itemForm.estimation = itemForm.estimation === value ? null : value"
+                                    :class="[
+                                        'px-4 py-2 rounded-lg font-bold text-sm transition border-2 active:scale-95',
+                                        itemForm.estimation === value
+                                            ? 'bg-brand text-white border-brand shadow-md scale-105'
+                                            : 'bg-surface text-text-main border-border-main hover:bg-surface-hover hover:border-brand/50'
+                                    ]">{{ value }}</button>
+                                <button type="button" @click="itemForm.estimation = null"
+                                    :class="[
+                                        'px-3 py-2 rounded-lg font-medium text-xs transition border-2',
+                                        itemForm.estimation === null
+                                            ? 'bg-surface-hover text-text-main border-border-main'
+                                            : 'bg-transparent text-text-muted border-transparent hover:text-text-main'
+                                    ]">Sem estimativa</button>
                             </div>
-                            <div class="flex-1">
-                                <div class="bg-primary rounded-lg px-3 py-2">
-                                    <p class="text-sm font-semibold text-text-primary">{{ comment.user.name }}</p>
-                                    <p class="text-sm text-text-primary mt-1 whitespace-pre-wrap">{{ comment.body }}</p>
-                                    <div v-if="comment.attachments && comment.attachments.length > 0" class="mt-2 grid grid-cols-2 gap-2">
+                        </div>
+                        <div class="md:col-span-2"><label class="block text-sm font-bold text-text-main mb-2">Responsáveis</label><Multiselect v-model="itemForm.assignee_ids" :options="users.map(u => u.id)" :custom-label="id => users.find(u => u.id === id)?.name" :multiple="true" placeholder="Selecionar responsáveis"></Multiselect></div>
+                    </div>
+                    <div class="flex justify-end gap-3 pt-6 border-t border-border-main">
+                        <button type="button" @click="closeModal" class="btn-secondary">Cancelar</button>
+                        <button type="submit" :disabled="itemForm.processing" class="btn-primary">Salvar</button>
+                    </div>
+                </form>
+
+                <div v-if="activeTab === 'subtasks' && itemForm.id" class="space-y-4">
+                    <div v-if="itemForm.subtasks?.length === 0" class="text-center py-8 text-text-muted">
+                        Nenhuma subtarefa ainda. Adicione abaixo. 👇
+                    </div>
+                    <div v-else class="space-y-2">
+                        <div v-for="subtask in itemForm.subtasks" :key="subtask.id"
+                            class="flex items-center gap-3 p-3 rounded-xl bg-surface border border-border-main hover:border-brand/40 transition group">
+                            <input type="checkbox" :checked="!!subtask.completed_at" @change="toggleSubtask(subtask)"
+                                class="h-5 w-5 rounded border-border-main bg-surface-variant text-brand focus:ring-brand focus:ring-2 cursor-pointer flex-shrink-0">
+                            <span class="flex-1 text-sm transition"
+                                :class="subtask.completed_at ? 'line-through text-text-muted' : 'text-text-main'">{{ subtask.title }}</span>
+                            <span v-if="subtask.completed_at" class="text-xs text-text-muted">✓ {{ new Date(subtask.completed_at).toLocaleDateString('pt-BR') }}</span>
+                        </div>
+                    </div>
+                    <form @submit.prevent="addSubtask" class="flex gap-2 pt-4 border-t border-border-main">
+                        <input type="text" v-model="newSubtaskForm.title" placeholder="Nova subtarefa..." class="input-field flex-1" required>
+                        <button type="submit" :disabled="newSubtaskForm.processing || !newSubtaskForm.title" class="btn-primary disabled:opacity-50 disabled:cursor-not-allowed">+ Adicionar</button>
+                    </form>
+                </div>
+
+                <div v-if="activeTab === 'comments' && itemForm.id" class="space-y-6">
+                    <form @submit.prevent="addComment" class="space-y-4">
+                        <textarea v-model="newCommentForm.body" placeholder="Escreva um comentário..." rows="3" class="input-field w-full"></textarea>
+                        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                            <div>
+                                <label class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-surface-hover border border-border-main text-sm text-text-muted cursor-pointer hover:text-text-main transition">
+                                    📎 Anexar arquivos
+                                    <input type="file" id="completed-comment-files" @input="newCommentForm.files = $event.target.files" multiple class="hidden">
+                                </label>
+                                <div v-if="newCommentForm.files?.length > 0" class="mt-2 flex flex-wrap gap-2"><span v-for="f in newCommentForm.files" :key="f.name" class="text-xs px-2 py-1 rounded bg-brand/10 text-brand">{{ f.name }}</span></div>
+                            </div>
+                            <button type="submit" :disabled="newCommentForm.processing || !newCommentForm.body" class="btn-primary">Enviar</button>
+                        </div>
+                    </form>
+
+                    <div class="space-y-4 max-h-96 overflow-y-auto">
+                        <div v-for="comment in itemForm.comments" :key="comment.id" class="p-4 rounded-xl bg-surface border border-border-main shadow-sm">
+                            <div class="flex gap-3 mb-3">
+                                <div class="h-8 w-8 rounded-full bg-brand text-white flex items-center justify-center text-xs font-bold">{{ comment.user?.name?.charAt(0) }}</div>
+                                <div class="flex-1 min-w-0">
+                                    <div class="flex items-center gap-2 mb-1"><p class="font-bold text-text-main text-sm">{{ comment.user?.name }}</p><p class="text-xs text-text-muted">{{ new Date(comment.created_at).toLocaleString() }}</p></div>
+                                    <p class="text-sm text-text-main whitespace-pre-wrap">{{ comment.body }}</p>
+                                    <div v-if="comment.attachments?.length > 0" class="mt-3 grid grid-cols-2 gap-2 border-t border-border-main/50 pt-3">
                                         <div v-for="attachment in comment.attachments" :key="attachment.id" class="relative group">
-                                            <div v-if="attachment.mime_type && attachment.mime_type.startsWith('image/')" 
-                                                 class="cursor-pointer overflow-hidden rounded border border-accent hover:opacity-90 transition"
-                                                 @click="expandedImage = '/storage/' + attachment.file_path">
+                                            <div v-if="attachment.mime_type?.startsWith('image/')" class="cursor-pointer overflow-hidden rounded-lg border border-border-main hover:opacity-90 transition" @click.stop="expandedImage = '/storage/' + attachment.file_path">
                                                 <img :src="'/storage/' + attachment.file_path" class="w-full h-24 object-cover">
                                             </div>
-                                            <div v-else class="flex items-center p-2 rounded border border-accent bg-secondary hover:bg-primary transition">
-                                                <a :href="'/storage/' + attachment.file_path" download class="flex items-center space-x-2 w-full text-text-primary text-xs">
-                                                    <svg class="h-4 w-4 text-text-secondary" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                                            <div v-else class="flex items-center p-2 rounded-lg border border-border-main bg-surface-variant hover:bg-surface-hover transition">
+                                                <a :href="'/storage/' + attachment.file_path" download target="_blank" @click.stop class="flex items-center gap-2 w-full text-text-main text-xs truncate">
+                                                    <svg class="h-4 w-4 text-text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
                                                     <span class="truncate">{{ attachment.file_name }}</span>
                                                 </a>
                                             </div>
                                         </div>
                                     </div>
                                 </div>
-                                <span class="text-xs text-text-secondary mt-1">{{ new Date(comment.created_at).toLocaleString() }}</span>
                             </div>
                         </div>
                     </div>
@@ -235,11 +275,11 @@ const isBug = (item) => item.type === 'bug';
             </div>
         </Modal>
 
-        <Modal :show="!!expandedImage" @close="expandedImage = null">
-            <div class="p-2 bg-black flex justify-center items-center h-full relative" @click="expandedImage = null">
-                <img :src="expandedImage" class="max-w-full max-h-screen object-contain text-white">
+        <Modal :show="!!expandedImage" @close="expandedImage = null" max-width="5xl">
+            <div class="p-2 bg-black flex justify-center items-center h-full relative min-h-[50vh]" @click="expandedImage = null">
+                <img :src="expandedImage" class="max-w-full max-h-[85vh] object-contain">
                 <button class="absolute top-4 right-4 text-white hover:text-gray-300" @click.stop="expandedImage = null">
-                    <svg class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                    <svg class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M6 18L18 6M6 6l12 12" /></svg>
                 </button>
             </div>
         </Modal>

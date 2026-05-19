@@ -296,6 +296,7 @@ const matchesFilter = (item) => {
                 <h2 class="text-2xl font-bold mb-6 text-text-main">{{ itemForm.id ? '✏️ Editar Item' : '➕ Novo Item' }}</h2>
                 <div v-if="itemForm.id" class="flex gap-2 mb-6 border-b border-border-main">
                     <button @click="activeTab = 'details'" :class="['px-4 py-2 font-medium border-b-2 transition', activeTab === 'details' ? 'border-brand text-brand' : 'border-transparent text-text-muted hover:text-text-main']">📝 Detalhes</button>
+                    <button @click="activeTab = 'subtasks'" :class="['px-4 py-2 font-medium border-b-2 transition', activeTab === 'subtasks' ? 'border-brand text-brand' : 'border-transparent text-text-muted hover:text-text-main']">📋 Subtarefas ({{ itemForm.subtasks?.filter(s => s.completed_at).length || 0 }}/{{ itemForm.subtasks?.length || 0 }})</button>
                     <button @click="activeTab = 'comments'" :class="['px-4 py-2 font-medium border-b-2 transition', activeTab === 'comments' ? 'border-brand text-brand' : 'border-transparent text-text-muted hover:text-text-main']">💬 Comentários ({{ itemForm.comments?.length || 0 }})</button>
                 </div>
 
@@ -341,6 +342,38 @@ const matchesFilter = (item) => {
                     </div>
                     <div class="flex justify-end gap-3 pt-6 border-t border-border-main"><button type="button" @click="closeModal" class="btn-secondary">Cancelar</button><button type="submit" class="btn-primary">Salvar</button></div>
                 </form>
+
+                <div v-if="activeTab === 'subtasks' && itemForm.id" class="space-y-4">
+                    <div v-if="itemForm.subtasks?.length === 0" class="text-center py-8 text-text-muted">
+                        Nenhuma subtarefa ainda. Adicione abaixo. 👇
+                    </div>
+                    <div v-else class="space-y-2">
+                        <div v-for="subtask in itemForm.subtasks" :key="subtask.id"
+                            class="flex items-center gap-3 p-3 rounded-xl bg-surface border border-border-main hover:border-brand/40 transition group">
+                            <input type="checkbox"
+                                :checked="!!subtask.completed_at"
+                                @change="toggleSubtask(subtask)"
+                                class="h-5 w-5 rounded border-border-main bg-surface-variant text-brand focus:ring-brand focus:ring-2 cursor-pointer flex-shrink-0">
+                            <span class="flex-1 text-sm transition"
+                                :class="subtask.completed_at ? 'line-through text-text-muted' : 'text-text-main'">
+                                {{ subtask.title }}
+                            </span>
+                            <span v-if="subtask.completed_at" class="text-xs text-text-muted">
+                                ✓ {{ new Date(subtask.completed_at).toLocaleDateString('pt-BR') }}
+                            </span>
+                        </div>
+                    </div>
+
+                    <form @submit.prevent="addSubtask" class="flex gap-2 pt-4 border-t border-border-main">
+                        <input type="text" v-model="newSubtaskForm.title"
+                            placeholder="Nova subtarefa..."
+                            class="input-field flex-1" required>
+                        <button type="submit" :disabled="newSubtaskForm.processing || !newSubtaskForm.title"
+                            class="btn-primary disabled:opacity-50 disabled:cursor-not-allowed">
+                            + Adicionar
+                        </button>
+                    </form>
+                </div>
 
                 <div v-if="activeTab === 'comments' && itemForm.id" class="space-y-6">
                     <form @submit.prevent="addComment" class="space-y-4">

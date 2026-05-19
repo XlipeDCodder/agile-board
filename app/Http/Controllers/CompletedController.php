@@ -25,7 +25,7 @@ class CompletedController extends Controller
             ->when($doneColumnId, function ($query) use ($doneColumnId) {
                 $query->where('column_id', $doneColumnId);
             })
-            ->with(['assignees', 'column', 'subtasks', 'comments.user', 'comments.attachments'])
+            ->with(['assignees', 'column', 'subtasks', 'comments.user', 'comments.attachments', 'project'])
             // Ordena pelos mais recentemente concluídos primeiro
             ->latest('updated_at')
             ->paginate(15);
@@ -33,6 +33,7 @@ class CompletedController extends Controller
         return Inertia::render('Completed/Index', [
             'items' => $items,
             'users' => User::all(['id', 'name']),
+            'projects' => \App\Models\Project::orderBy('name')->get(['id', 'name']),
         ]);
     }
 }
