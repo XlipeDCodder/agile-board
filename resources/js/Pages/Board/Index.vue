@@ -182,6 +182,8 @@ const priorityClasses = (p) => ({
 
 const isBug = (item) => item.type === 'bug';
 
+const pokerValues = [1, 2, 3, 5, 8, 13, 20];
+
 const isOverdue = (dateString) => {
     if (!dateString) return false;
     const [year, month, day] = dateString.split('-');
@@ -304,6 +306,37 @@ const matchesFilter = (item) => {
                         <div><label class="block text-sm font-bold text-text-main mb-2">Tipo</label><select v-model="itemForm.type" class="input-field w-full"><option value="task">Tarefa</option><option value="bug">Bug</option></select></div>
                         <div><label class="block text-sm font-bold text-text-main mb-2">Prioridade</label><select v-model="itemForm.priority" class="input-field w-full"><option>Baixa</option><option>Média</option><option>Alta</option><option>Crítica</option></select></div>
                         <div class="md:col-span-2"><label class="block text-sm font-bold text-text-main mb-2">Projeto *</label><select v-model="itemForm.project_id" class="input-field w-full" required><option v-for="proj in projects" :key="proj.id" :value="proj.id">{{ proj.name }}</option></select></div>
+                        <div class="md:col-span-2">
+                            <label class="block text-sm font-bold text-text-main mb-2">Dificuldade <span class="font-normal text-text-muted">(Planning Poker)</span></label>
+                            <div class="flex flex-wrap gap-2">
+                                <button
+                                    v-for="value in pokerValues"
+                                    :key="value"
+                                    type="button"
+                                    @click="itemForm.estimation = itemForm.estimation === value ? null : value"
+                                    :class="[
+                                        'px-4 py-2 rounded-lg font-bold text-sm transition border-2 active:scale-95',
+                                        itemForm.estimation === value
+                                            ? 'bg-brand text-white border-brand shadow-md scale-105'
+                                            : 'bg-surface text-text-main border-border-main hover:bg-surface-hover hover:border-brand/50'
+                                    ]"
+                                >
+                                    {{ value }}
+                                </button>
+                                <button
+                                    type="button"
+                                    @click="itemForm.estimation = null"
+                                    :class="[
+                                        'px-3 py-2 rounded-lg font-medium text-xs transition border-2',
+                                        itemForm.estimation === null
+                                            ? 'bg-surface-hover text-text-main border-border-main'
+                                            : 'bg-transparent text-text-muted border-transparent hover:text-text-main'
+                                    ]"
+                                >
+                                    Sem estimativa
+                                </button>
+                            </div>
+                        </div>
                         <div class="md:col-span-2"><label class="block text-sm font-bold text-text-main mb-2">Responsáveis</label><Multiselect v-model="itemForm.assignee_ids" :options="users.map(u => u.id)" :custom-label="id => users.find(u => u.id === id)?.name" :multiple="true" placeholder="Selecionar responsáveis"></Multiselect></div>
                     </div>
                     <div class="flex justify-end gap-3 pt-6 border-t border-border-main"><button type="button" @click="closeModal" class="btn-secondary">Cancelar</button><button type="submit" class="btn-primary">Salvar</button></div>
