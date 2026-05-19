@@ -17,3 +17,11 @@ window.Echo = new Echo({
     forceTLS: (import.meta.env.VITE_REVERB_SCHEME ?? 'https') === 'https',
     enabledTransports: ['ws', 'wss'],
 });
+
+window.axios.interceptors.request.use((config) => {
+    const socketId = window.Echo?.socketId();
+    if (socketId) {
+        config.headers['X-Socket-Id'] = socketId;
+    }
+    return config;
+});
