@@ -28,6 +28,7 @@ class CollaboratorTimelineBuilder
         ];
 
         $createdItems = Item::with('project:id,name')
+            ->whereNull('parent_id')
             ->where('creator_id', $user->id)
             ->get();
 
@@ -45,6 +46,7 @@ class CollaboratorTimelineBuilder
         }
 
         $assignedItemsList = Item::whereHas('assignees', fn ($q) => $q->where('users.id', $user->id))
+            ->whereNull('parent_id')
             ->with('project:id,name')
             ->get();
 

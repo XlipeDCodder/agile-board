@@ -26,6 +26,7 @@ class ProjectTimelineBuilder
         ];
 
         $items = Item::with(['creator:id,name', 'assignees:id,name', 'column:id,name'])
+            ->whereNull('parent_id')
             ->where('project_id', $project->id)
             ->get();
 

@@ -90,13 +90,17 @@ class CollaboratorContextBuilder
                 'snippet' => mb_strlen($c->body) > 200 ? mb_substr($c->body, 0, 200).'…' : $c->body,
             ])->all();
 
-        $totalCreated = Item::where('creator_id', $user->id)->count();
-        $totalAssigned = Item::whereHas('assignees', fn ($q) => $q->where('users.id', $user->id))->count();
+        // Todas as contagens abaixo ignoram subtarefas (parent_id NOT NULL) —
+        // a unidade de análise do gestor é o card, não a subtarefa.
+        $totalCreated = Item::whereNull('parent_id')->where('creator_id', $user->id)->count();
+        $totalAssigned = Item::whereNull('parent_id')
+            ->whereHas('assignees', fn ($q) => $q->where('users.id', $user->id))->count();
         $totalCompletedAsCreator = $doneColumnId
-            ? Item::where('creator_id', $user->id)->where('column_id', $doneColumnId)->count()
+            ? Item::whereNull('parent_id')->where('creator_id', $user->id)->where('column_id', $doneColumnId)->count()
             : 0;
         $totalCompletedAsAssignee = $doneColumnId
-            ? Item::whereHas('assignees', fn ($q) => $q->where('users.id', $user->id))
+            ? Item::whereNull('parent_id')
+                ->whereHas('assignees', fn ($q) => $q->where('users.id', $user->id))
                 ->where('column_id', $doneColumnId)->count()
             : 0;
         $totalMinutes = (int) TimeEntry::where('user_id', $user->id)->sum('minutes');
@@ -115,10 +119,11 @@ class CollaboratorContextBuilder
 
         $avgTimeInColumn = $this->averageTimeInColumns($user, $columns);
 
-        $priorityDistribution = Item::where(function ($q) use ($user) {
-            $q->where('creator_id', $user->id)
-                ->orWhereHas('assignees', fn ($a) => $a->where('users.id', $user->id));
-        })
+        $priorityDistribution = Item::whereNull('parent_id')
+            ->where(function ($q) use ($user) {
+                $q->where('creator_id', $user->id)
+                    ->orWhereHas('assignees', fn ($a) => $a->where('users.id', $user->id));
+            })
             ->selectRaw('priority, COUNT(*) as total')
             ->groupBy('priority')
             ->pluck('total', 'priority')
@@ -160,10 +165,11 @@ class CollaboratorContextBuilder
      */
     private function averageTimeInColumns(User $user, array $columnsById): array
     {
-        $itemIds = Item::where(function ($q) use ($user) {
-            $q->where('creator_id', $user->id)
-                ->orWhereHas('assignees', fn ($a) => $a->where('users.id', $user->id));
-        })->pluck('id');
+        $itemIds = Item::whereNull('parent_id')
+            ->where(function ($q) use ($user) {
+                $q->where('creator_id', $user->id)
+                    ->orWhereHas('assignees', fn ($a) => $a->where('users.id', $user->id));
+            })->pluck('id');
 
         if ($itemIds->isEmpty()) {
             return [];
