@@ -1,7 +1,8 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue';
-import { Link, usePage } from '@inertiajs/vue3';
+import { Link, usePage, router } from '@inertiajs/vue3';
 import ThemeToggle from '@/Components/ThemeToggle.vue';
+import Modal from '@/Components/Modal.vue';
 
 const emit = defineEmits(['toggle']);
 const isExpanded = ref(true);
@@ -31,12 +32,38 @@ const navItems = [
 
 const adminItems = [
     { icon: '⚙️', label: 'Admin', route: 'admin.columns.index', icon_svg: 'M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z' },
+    { icon: '📊', label: 'Relatórios', route: 'admin.reports.index', icon_svg: 'M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z' },
+    { icon: '🤖', label: 'Bot Config', route: 'admin.bot-config.index', icon_svg: 'M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z', requiresConfirm: true },
 ];
 
 const page = usePage();
 const isAdmin = computed(() => page.props.auth.user?.is_admin);
 
 const isActive = (route) => page.url.includes(route.split('.')[0]);
+
+const showConfirmModal = ref(false);
+const pendingRoute = ref(null);
+
+const handleAdminClick = (item, event) => {
+    if (item.requiresConfirm) {
+        event.preventDefault();
+        pendingRoute.value = item.route;
+        showConfirmModal.value = true;
+    }
+};
+
+const confirmNavigation = () => {
+    if (pendingRoute.value) {
+        router.visit(route(pendingRoute.value));
+    }
+    showConfirmModal.value = false;
+    pendingRoute.value = null;
+};
+
+const cancelNavigation = () => {
+    showConfirmModal.value = false;
+    pendingRoute.value = null;
+};
 </script>
 
 <template>
@@ -92,6 +119,7 @@ const isActive = (route) => page.url.includes(route.split('.')[0]);
                     v-for="item in adminItems"
                     :key="item.route"
                     :href="route(item.route)"
+                    @click="handleAdminClick(item, $event)"
                     :class="[
                         'sidebar-item group',
                         isActive(item.route) ? 'active' : ''
@@ -107,6 +135,25 @@ const isActive = (route) => page.url.includes(route.split('.')[0]);
                 </Link>
             </div>
         </nav>
+
+        <!-- Modal de confirmação para itens sensíveis -->
+        <Modal :show="showConfirmModal" @close="cancelNavigation" max-width="md">
+            <div class="p-6 bg-surface-variant">
+                <div class="flex items-start gap-3 mb-4">
+                    <div class="text-3xl">⚠️</div>
+                    <div>
+                        <h3 class="text-lg font-bold text-text-main">Configurações sensíveis</h3>
+                        <p class="text-sm text-text-muted mt-1">
+                            Você está prestes a acessar configurações sensíveis. Alterações incorretas podem desativar o assistente Icarus, expor a chave de API ou enviar dados a serviços externos. Prossiga com cautela.
+                        </p>
+                    </div>
+                </div>
+                <div class="flex justify-end gap-3 pt-4 border-t border-border-main">
+                    <button type="button" @click="cancelNavigation" class="btn-secondary">Cancelar</button>
+                    <button type="button" @click="confirmNavigation" class="btn-primary">Continuar</button>
+                </div>
+            </div>
+        </Modal>
 
         <!-- Footer -->
         <div class="border-t border-border-main p-4 space-y-3">
