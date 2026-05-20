@@ -496,7 +496,12 @@ const matchesFilter = (item) => {
                             class="px-3 py-1.5 rounded-lg text-sm font-medium bg-orange-500/10 text-orange-500 border border-orange-500/30 hover:bg-orange-500/20 transition">
                             🔄 Reabrir card
                         </button>
-                        <button v-if="currentItem?.is_blocked"
+                        <!--
+                            Cards em "Feito" não têm controles de impedimento:
+                            um card concluído não pode estar impedido. O backend
+                            também auto-desimpede ao mover pra Feito.
+                        -->
+                        <button v-if="currentItem?.is_blocked && !isInFeito"
                             type="button"
                             @click="unblockCard"
                             class="px-3 py-1.5 rounded-lg text-sm font-medium bg-emerald-500/10 text-emerald-500 border border-emerald-500/30 hover:bg-emerald-500/20 transition">

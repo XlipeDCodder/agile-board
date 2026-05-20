@@ -16,6 +16,9 @@ return new class extends Migration
         if ($driver === 'mysql' || $driver === 'mariadb') {
             DB::statement("ALTER TABLE items MODIFY type VARCHAR(50) NOT NULL DEFAULT 'task'");
         } elseif ($driver === 'pgsql') {
+            // No Postgres, enum() do Laravel cria VARCHAR + CHECK constraint;
+            // o ALTER TYPE não remove o CHECK. Dropamos antes pra permitir 'reabertura'.
+            DB::statement('ALTER TABLE items DROP CONSTRAINT IF EXISTS items_type_check');
             DB::statement('ALTER TABLE items ALTER COLUMN type TYPE VARCHAR(50)');
             DB::statement("ALTER TABLE items ALTER COLUMN type SET DEFAULT 'task'");
         }

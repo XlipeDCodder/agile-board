@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Column;
 use App\Models\Item;
+use App\Models\ItemBlockEvent;
 use App\Models\User;
 use App\Models\ItemStatusHistory;
 use App\Events\ItemMoved;
@@ -90,6 +91,25 @@ class BoardController extends Controller
 
                         if ($doneColumnId && $item->column_id == $doneColumnId) {
                             $item->subtasks()->update(['completed_at' => now()]);
+
+                            // Auto-desimpede ao concluir: cards em "Feito" não
+                            // podem ficar impedidos. Mantém histórico via
+                            // ItemBlockEvent pra timeline.
+                            if ($item->is_blocked) {
+                                ItemBlockEvent::create([
+                                    'item_id' => $item->id,
+                                    'event' => 'unblocked',
+                                    'reason' => $item->blocked_reason,
+                                    'blocked_by_item_id' => $item->blocked_by_item_id,
+                                    'user_id' => \Illuminate\Support\Facades\Auth::id(),
+                                ]);
+                                $item->update([
+                                    'is_blocked' => false,
+                                    'blocked_reason' => null,
+                                    'blocked_by_item_id' => null,
+                                    'blocked_at' => null,
+                                ]);
+                            }
                         }
                     }
                 }
