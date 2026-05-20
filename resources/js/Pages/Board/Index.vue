@@ -256,7 +256,12 @@ const openEditItemModal = (item) => {
     itemForm.justification = item.justification ?? '';
     itemForm.subtasks = item.subtasks;
     itemForm.comments = item.comments;
-    currentItem.value = item;
+    // Anexa a coluna ao currentItem: o objeto vindo de column.items NÃO traz a
+    // relação .column eager-loaded (só column_id), e o computed isInFeito
+    // depende de .column.name. Sem isso, o botão "Reabrir card" não aparecia
+    // na primeira abertura do modal — só depois do watch sincronizar.
+    const col = boardColumns.value.find(c => c.id === item.column_id);
+    currentItem.value = { ...item, column: { id: col?.id, name: col?.name } };
     newSubtaskForm.parent_id = item.id;
     newCommentForm.item_id = item.id;
     activeTab.value = 'details';
