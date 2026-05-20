@@ -30,10 +30,16 @@ class CompletedController extends Controller
             ->latest('updated_at')
             ->paginate(15);
 
+        // Colunas exceto "Feito" — destino possível para reaberturas.
+        $columnsForReopen = Column::where('name', '!=', 'Feito')
+            ->orderBy('order')
+            ->get(['id', 'name']);
+
         return Inertia::render('Completed/Index', [
             'items' => $items,
             'users' => User::all(['id', 'name']),
             'projects' => \App\Models\Project::orderBy('name')->get(['id', 'name']),
+            'columnsForReopen' => $columnsForReopen,
         ]);
     }
 }

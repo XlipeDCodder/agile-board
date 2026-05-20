@@ -2,9 +2,10 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import Modal from '@/Components/Modal.vue';
 import { Head, router, useForm } from '@inertiajs/vue3';
-import { ref, onMounted, watch } from 'vue';
+import { ref, computed, onMounted, watch } from 'vue';
 import draggable from 'vuedraggable';
 import Multiselect from 'vue-multiselect';
+import axios from 'axios';
 
 const props = defineProps({
     columns: Array,
@@ -20,8 +21,45 @@ const activeTab = ref('details');
 const itemForm = useForm({
     id: null, title: '', description: '', type: 'task',
     priority: 'Média', assignee_ids: [], due_date: null,
-    column_id: null, project_id: null, estimation: null, subtasks: [], comments: [],
+    column_id: null, project_id: null, estimation: null,
+    predicted_value: null, predicted_unit: 'hours',
+    reopened_from_id: null, justification: '',
+    subtasks: [], comments: [],
 });
+
+// Visão completa do card sendo editado (para acessar campos que não estão no
+// itemForm, como is_blocked, blocked_reason, etc).
+const currentItem = ref(null);
+
+// Sub-modal de impedimento.
+const showBlockModal = ref(false);
+const blockForm = useForm({
+    reason: '',
+    blocked_by_item_id: null,
+});
+
+const allCardsFlat = computed(() => {
+    const all = [];
+    for (const col of boardColumns.value || []) {
+        for (const it of col.items || []) {
+            if (it.id !== itemForm.id) {
+                all.push({ id: it.id, title: it.title, column: col.name });
+            }
+        }
+    }
+    return all;
+});
+
+const predictedLabel = (item) => {
+    if (!item?.predicted_value || !item?.predicted_unit) return null;
+    const v = item.predicted_value;
+    const map = {
+        minutes: v === 1 ? 'minuto' : 'minutos',
+        hours: v === 1 ? 'hora' : 'horas',
+        days: v === 1 ? 'dia' : 'dias',
+    };
+    return `${v} ${map[item.predicted_unit] || item.predicted_unit}`;
+};
 
 const newSubtaskForm = useForm({
     title: '',
@@ -77,7 +115,34 @@ function onDragEnd() {
         preserveScroll: true,
         preserveState: true,
         only: [],
+        onError: () => {
+            // Backend rejeitou (ex: tentou sair de "Feito"). Recarrega para
+            // sincronizar com o servidor.
+            router.reload({ only: ['columns'], preserveScroll: true });
+        },
     });
+}
+
+/**
+ * Callback do vuedraggable: bloqueia drop quando origem é coluna "Feito"
+ * e destino é outra coluna qualquer.
+ */
+function canMove(evt) {
+    const fromList = evt.from?.__draggable_component__?.realList
+        || evt.relatedContext?.list;
+    const toList = evt.to?.__draggable_component__?.realList
+        || evt.relatedContext?.list;
+    // Estratégia mais robusta: identifica a coluna pelos items.
+    const draggedItem = evt.draggedContext?.element;
+    if (!draggedItem) return true;
+    const fromColumn = boardColumns.value.find(c => c.items.some(i => i.id === draggedItem.id));
+    const toItems = evt.relatedContext?.list;
+    const toColumn = boardColumns.value.find(c => c.items === toItems);
+    if (!fromColumn || !toColumn) return true;
+    if (fromColumn.name === 'Feito' && toColumn.id !== fromColumn.id) {
+        return false;
+    }
+    return true;
 }
 
 const openCreateItemModal = (columnId) => {
@@ -92,10 +157,15 @@ const openCreateItemModal = (columnId) => {
     itemForm.due_date = null;
     itemForm.project_id = null;
     itemForm.estimation = null;
+    itemForm.predicted_value = null;
+    itemForm.predicted_unit = 'hours';
+    itemForm.reopened_from_id = null;
+    itemForm.justification = '';
     itemForm.subtasks = [];
     itemForm.comments = [];
+    currentItem.value = null;
     activeTab.value = 'details';
-    
+
     itemForm.column_id = columnId;
     showItemModal.value = true;
 };
@@ -103,23 +173,53 @@ const openCreateItemModal = (columnId) => {
 const openEditItemModal = (item) => {
     itemForm.reset();
     itemForm.clearErrors();
-    
+
     itemForm.id = item.id;
     itemForm.title = item.title;
     itemForm.description = item.description;
     itemForm.type = item.type;
     itemForm.priority = item.priority;
-    itemForm.assignee_ids = item.assignees.map(user => user.id); 
+    itemForm.assignee_ids = item.assignees.map(user => user.id);
     itemForm.due_date = item.due_date;
     itemForm.column_id = item.column_id;
     itemForm.project_id = item.project_id;
     itemForm.estimation = item.estimation;
+    itemForm.predicted_value = item.predicted_value ?? null;
+    itemForm.predicted_unit = item.predicted_unit ?? 'hours';
+    itemForm.reopened_from_id = item.reopened_from_id ?? null;
+    itemForm.justification = item.justification ?? '';
     itemForm.subtasks = item.subtasks;
     itemForm.comments = item.comments;
+    currentItem.value = item;
     newSubtaskForm.parent_id = item.id;
     newCommentForm.item_id = item.id;
     activeTab.value = 'details';
     showItemModal.value = true;
+};
+
+const openBlockModal = () => {
+    blockForm.reset();
+    blockForm.clearErrors();
+    showBlockModal.value = true;
+};
+
+const submitBlock = () => {
+    blockForm.post(route('items.block', itemForm.id), {
+        preserveScroll: true,
+        preserveState: true,
+        onSuccess: () => {
+            showBlockModal.value = false;
+            blockForm.reset();
+        },
+    });
+};
+
+const unblockCard = () => {
+    if (!itemForm.id) return;
+    router.post(route('items.unblock', itemForm.id), {}, {
+        preserveScroll: true,
+        preserveState: true,
+    });
 };
 
 const closeModal = () => { showItemModal.value = false; };
@@ -256,9 +356,27 @@ const matchesFilter = (item) => {
                             </button>
                         </div>
 
-                        <draggable v-model="column.items" group="items" item-key="id" class="p-4 space-y-3 flex-grow overflow-y-auto" @end="onDragEnd">
+                        <draggable v-model="column.items" group="items" item-key="id" class="p-4 space-y-3 flex-grow overflow-y-auto" @end="onDragEnd" :move="canMove">
                             <template #item="{element: item}">
-                                <div v-show="matchesFilter(item)" @click="openEditItemModal(item)" class="trello-card group">
+                                <div v-show="matchesFilter(item)" @click="openEditItemModal(item)"
+                                    class="trello-card group"
+                                    :class="item.is_blocked ? 'border-2 border-trello-red/60' : ''">
+                                    <!-- Badges de estado -->
+                                    <div v-if="item.is_blocked || item.type === 'reabertura' || (item.predicted_value && item.predicted_unit)" class="flex flex-wrap gap-1.5 mb-2">
+                                        <span v-if="item.is_blocked" :title="item.blocked_reason || 'Impedido'"
+                                            class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold bg-trello-red/10 text-trello-red border border-trello-red/30">
+                                            🚫 Impedido
+                                        </span>
+                                        <span v-if="item.type === 'reabertura'" :title="`Reaberto do card #${item.reopened_from_id}`"
+                                            class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold bg-orange-500/10 text-orange-500 border border-orange-500/30">
+                                            🔄 Reaberto de #{{ item.reopened_from_id }}
+                                        </span>
+                                        <span v-if="item.predicted_value && item.predicted_unit"
+                                            class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-surface text-text-muted border border-border-main">
+                                            ⏱️ {{ predictedLabel(item) }}
+                                        </span>
+                                    </div>
+
                                     <div class="flex justify-between items-start mb-3">
                                         <h3 class="font-bold text-text-main flex-1 group-hover:text-brand transition line-clamp-2">{{ item.title }}</h3>
                                         <div class="flex items-center gap-1.5 flex-shrink-0 ml-2">
@@ -293,7 +411,33 @@ const matchesFilter = (item) => {
 
         <Modal :show="showItemModal" @close="closeModal" max-width="3xl">
             <div class="p-6 bg-surface-variant max-h-[90vh] overflow-y-auto">
-                <h2 class="text-2xl font-bold mb-6 text-text-main">{{ itemForm.id ? '✏️ Editar Item' : '➕ Novo Item' }}</h2>
+                <div class="flex items-start justify-between gap-4 mb-6">
+                    <h2 class="text-2xl font-bold text-text-main">
+                        {{ itemForm.id ? '✏️ Editar Item' : '➕ Novo Item' }}
+                        <span v-if="itemForm.type === 'reabertura'" class="text-base font-medium text-orange-500 ml-2">🔄 Reabertura</span>
+                    </h2>
+                    <div v-if="itemForm.id" class="flex items-center gap-2">
+                        <button v-if="currentItem?.is_blocked"
+                            type="button"
+                            @click="unblockCard"
+                            class="px-3 py-1.5 rounded-lg text-sm font-medium bg-emerald-500/10 text-emerald-500 border border-emerald-500/30 hover:bg-emerald-500/20 transition">
+                            ✅ Desimpedir
+                        </button>
+                        <button v-else
+                            type="button"
+                            @click="openBlockModal"
+                            class="px-3 py-1.5 rounded-lg text-sm font-medium bg-trello-red/10 text-trello-red border border-trello-red/30 hover:bg-trello-red/20 transition">
+                            🚫 Marcar como impedimento
+                        </button>
+                    </div>
+                </div>
+
+                <div v-if="currentItem?.is_blocked" class="mb-4 p-3 rounded-xl bg-trello-red/10 border border-trello-red/30 text-sm">
+                    <p class="font-bold text-trello-red mb-1">🚫 Card impedido</p>
+                    <p class="text-text-main"><strong>Motivo:</strong> {{ currentItem.blocked_reason }}</p>
+                    <p v-if="currentItem.blocked_by_item_id" class="text-text-muted mt-1">Bloqueado pelo card #{{ currentItem.blocked_by_item_id }}</p>
+                </div>
+
                 <div v-if="itemForm.id" class="flex gap-2 mb-6 border-b border-border-main">
                     <button @click="activeTab = 'details'" :class="['px-4 py-2 font-medium border-b-2 transition', activeTab === 'details' ? 'border-brand text-brand' : 'border-transparent text-text-muted hover:text-text-main']">📝 Detalhes</button>
                     <button @click="activeTab = 'subtasks'" :class="['px-4 py-2 font-medium border-b-2 transition', activeTab === 'subtasks' ? 'border-brand text-brand' : 'border-transparent text-text-muted hover:text-text-main']">📋 Subtarefas ({{ itemForm.subtasks?.filter(s => s.completed_at).length || 0 }}/{{ itemForm.subtasks?.length || 0 }})</button>
@@ -336,6 +480,29 @@ const matchesFilter = (item) => {
                                 >
                                     Sem estimativa
                                 </button>
+                            </div>
+                        </div>
+                        <div class="md:col-span-2">
+                            <label class="block text-sm font-bold text-text-main mb-2">Previsão de término <span class="font-normal text-text-muted">(opcional)</span></label>
+                            <div class="flex gap-2">
+                                <input v-model.number="itemForm.predicted_value" type="number" min="1" max="9999"
+                                    placeholder="Quantidade" class="input-field flex-1">
+                                <select v-model="itemForm.predicted_unit" class="input-field w-40">
+                                    <option value="minutes">Minutos</option>
+                                    <option value="hours">Horas</option>
+                                    <option value="days">Dias</option>
+                                </select>
+                            </div>
+                            <p class="text-xs text-text-muted mt-1">Estimativa absoluta de tempo (diferente da Dificuldade, que é complexidade relativa).</p>
+                        </div>
+                        <div v-if="itemForm.type === 'reabertura'" class="md:col-span-2 p-4 rounded-xl bg-orange-500/10 border border-orange-500/30 space-y-3">
+                            <div>
+                                <label class="block text-sm font-bold text-text-main mb-1">🔄 Card original</label>
+                                <p class="text-sm text-text-main">#{{ itemForm.reopened_from_id }}</p>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-bold text-text-main mb-1">Justificativa da reabertura <span class="text-text-muted font-normal text-xs">(imutável)</span></label>
+                                <p class="text-sm text-text-main whitespace-pre-wrap">{{ itemForm.justification }}</p>
                             </div>
                         </div>
                         <div class="md:col-span-2"><label class="block text-sm font-bold text-text-main mb-2">Responsáveis</label><Multiselect v-model="itemForm.assignee_ids" :options="users.map(u => u.id)" :custom-label="id => users.find(u => u.id === id)?.name" :multiple="true" placeholder="Selecionar responsáveis"></Multiselect></div>
@@ -416,6 +583,40 @@ const matchesFilter = (item) => {
                         </div>
                     </div>
                 </div>
+            </div>
+        </Modal>
+
+        <!-- Sub-modal: marcar como impedimento -->
+        <Modal :show="showBlockModal" @close="showBlockModal = false" max-width="lg">
+            <div class="p-6 bg-surface-variant">
+                <h3 class="text-lg font-bold text-text-main mb-1">🚫 Marcar como impedimento</h3>
+                <p class="text-sm text-text-muted mb-5">Descreva por que o card está impedido. Opcionalmente, indique qual outro card está causando o bloqueio.</p>
+
+                <form @submit.prevent="submitBlock" class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-bold text-text-main mb-2">Motivo *</label>
+                        <textarea v-model="blockForm.reason" rows="3" required maxlength="1000"
+                            placeholder="Ex: aguardando aprovação do cliente / dependência externa / ambiente fora do ar..."
+                            class="input-field w-full"></textarea>
+                        <div v-if="blockForm.errors.reason" class="text-trello-red text-xs mt-1">{{ blockForm.errors.reason }}</div>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-bold text-text-main mb-2">Bloqueado por qual card? <span class="font-normal text-text-muted">(opcional)</span></label>
+                        <select v-model="blockForm.blocked_by_item_id" class="input-field w-full">
+                            <option :value="null">— Nenhum card específico —</option>
+                            <option v-for="c in allCardsFlat" :key="c.id" :value="c.id">
+                                #{{ c.id }} {{ c.title }} ({{ c.column }})
+                            </option>
+                        </select>
+                    </div>
+                    <div class="flex justify-end gap-3 pt-4 border-t border-border-main">
+                        <button type="button" @click="showBlockModal = false" class="btn-secondary">Cancelar</button>
+                        <button type="submit" :disabled="blockForm.processing || !blockForm.reason"
+                            class="btn-primary disabled:opacity-50 disabled:cursor-not-allowed">
+                            Marcar como impedido
+                        </button>
+                    </div>
+                </form>
             </div>
         </Modal>
 

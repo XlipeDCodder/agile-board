@@ -13,6 +13,7 @@ use App\Http\Controllers\Admin\ReportController;
 use App\Http\Controllers\Admin\BotConfigController;
 use App\Http\Controllers\Admin\IcarusController;
 use App\Http\Controllers\CommentController;
+use App\Http\Controllers\ItemBlockController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\DashboardController;
 use Inertia\Inertia;
@@ -50,6 +51,8 @@ Route::middleware('auth')->group(function () {
     Route::patch('/columns/reorder', [ColumnController::class, 'reorder'])->name('columns.reorder');
     Route::get('/admin/columns', [ColumnManagementController::class, 'index'])->name('admin.columns.index');
     Route::post('/comments', [CommentController::class, 'store'])->name('comments.store');
+    Route::post('/items/{item}/block', [ItemBlockController::class, 'block'])->name('items.block');
+    Route::post('/items/{item}/unblock', [ItemBlockController::class, 'unblock'])->name('items.unblock');
     Route::resource('projects', \App\Http\Controllers\ProjectController::class)->only(['index', 'store', 'update', 'destroy']);
     Route::resource('time-entries', \App\Http\Controllers\TimeEntryController::class)->only(['index', 'store', 'update', 'destroy']);
 });

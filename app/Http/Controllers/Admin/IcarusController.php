@@ -91,6 +91,11 @@ Semântica do sistema (IMPORTANTE):
 - **Conclusão de SUBTAREFA**: subtarefas TÊM data de conclusão real, gravada quando o gestor/colaborador marca o checkbox no card. (Não confundir com a regra dos cards.)
 - "Em andamento" = qualquer coluna que não seja "Feito".
 
+Conceitos novos:
+- **Reabertura**: card de tipo `reabertura` criado quando um card concluído precisa de retrabalho. Tem `reopened_from_id` (id do card original em Feito) e `justification` (motivo). O original PERMANECE em Feito — a reabertura é uma nova unidade de trabalho independente. Cadeias são possíveis (reabertura de reabertura). Use o agregado `cards_reopened_total` para responder "quantos cards foram reabertos". Para falar do motivo, cite o campo `justification`.
+- **Previsão de término**: campos `predicted_value` + `predicted_unit` (minutes/hours/days). É um ETA absoluto fornecido pelo criador do card. Distinto da `estimation` (planning poker = complexidade relativa em pontos Fibonacci). Os dois coexistem e respondem perguntas diferentes — "quanto tempo deve levar?" usa predicted; "quão complexo é?" usa estimation.
+- **Impedimento**: `is_blocked=true` significa que o card está parado AGORA por algum motivo. `blocked_reason` traz o motivo livre; `blocked_by_item_id` pode apontar outro card que está bloqueando este. O histórico de bloqueios e desbloqueios fica em `item_block_events` e na timeline como eventos `card_blocked` / `card_unblocked`. Use o agregado `cards_currently_blocked` para "quantos cards estão impedidos agora" e `avg_hours_blocked` para tempo médio em impedimento.
+
 <user-data>
 {$safeJson}
 </user-data>

@@ -21,7 +21,10 @@ const pokerValues = [1, 2, 3, 5, 8, 13, 20];
 const itemForm = useForm({
     id: null, title: '', description: '', type: 'task',
     priority: 'Média', assignee_ids: [], due_date: null,
-    column_id: null, project_id: null, estimation: null, subtasks: [], comments: [],
+    column_id: null, project_id: null, estimation: null,
+    predicted_value: null, predicted_unit: 'hours',
+    reopened_from_id: null, justification: '',
+    subtasks: [], comments: [],
 });
 
 const newSubtaskForm = useForm({
@@ -46,6 +49,10 @@ const openEditItemModal = (item) => {
     itemForm.column_id = item.column_id;
     itemForm.project_id = item.project_id;
     itemForm.estimation = item.estimation;
+    itemForm.predicted_value = item.predicted_value ?? null;
+    itemForm.predicted_unit = item.predicted_unit ?? 'hours';
+    itemForm.reopened_from_id = item.reopened_from_id ?? null;
+    itemForm.justification = item.justification ?? '';
     itemForm.subtasks = item.subtasks || [];
     itemForm.comments = item.comments || [];
     newSubtaskForm.parent_id = item.id;
@@ -122,7 +129,13 @@ const addComment = () => {
                             <tbody class="bg-secondary divide-y divide-accent">
                                 <tr v-for="item in items.data" :key="item.id" @click="openEditItemModal(item)" class="hover:bg-primary cursor-pointer">
                                     <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-text-primary">#{{ item.id }}</td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-text-primary">{{ item.title }}</td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-text-primary">
+                                        <div class="flex items-center gap-2">
+                                            <span>{{ item.title }}</span>
+                                            <span v-if="item.is_blocked" title="Impedido" class="text-trello-red text-xs">🚫</span>
+                                            <span v-if="item.type === 'reabertura'" :title="`Reaberto de #${item.reopened_from_id}`" class="text-orange-500 text-xs">🔄</span>
+                                        </div>
+                                    </td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-text-secondary">{{ item.column.name }}</td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-text-secondary">{{ item.assignees.map(u => u.name).join(', ') || 'N/A' }}</td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-text-secondary">{{ item.priority }}</td>
@@ -182,6 +195,27 @@ const addComment = () => {
                                             ? 'bg-surface-hover text-text-main border-border-main'
                                             : 'bg-transparent text-text-muted border-transparent hover:text-text-main'
                                     ]">Sem estimativa</button>
+                            </div>
+                        </div>
+                        <div class="md:col-span-2">
+                            <label class="block text-sm font-bold text-text-main mb-2">Previsão de término <span class="font-normal text-text-muted">(opcional)</span></label>
+                            <div class="flex gap-2">
+                                <input v-model.number="itemForm.predicted_value" type="number" min="1" max="9999" placeholder="Quantidade" class="input-field flex-1">
+                                <select v-model="itemForm.predicted_unit" class="input-field w-40">
+                                    <option value="minutes">Minutos</option>
+                                    <option value="hours">Horas</option>
+                                    <option value="days">Dias</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div v-if="itemForm.type === 'reabertura'" class="md:col-span-2 p-4 rounded-xl bg-orange-500/10 border border-orange-500/30 space-y-3">
+                            <div>
+                                <label class="block text-sm font-bold text-text-main mb-1">🔄 Card original</label>
+                                <p class="text-sm text-text-main">#{{ itemForm.reopened_from_id }}</p>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-bold text-text-main mb-1">Justificativa <span class="text-text-muted font-normal text-xs">(imutável)</span></label>
+                                <p class="text-sm text-text-main whitespace-pre-wrap">{{ itemForm.justification }}</p>
                             </div>
                         </div>
                         <div class="md:col-span-2"><label class="block text-sm font-bold text-text-main mb-2">Responsáveis</label><Multiselect v-model="itemForm.assignee_ids" :options="users.map(u => u.id)" :custom-label="id => users.find(u => u.id === id)?.name" :multiple="true" placeholder="Selecionar responsáveis"></Multiselect></div>

@@ -10,6 +10,7 @@ const props = defineProps({
     items: Object,
     users: Array,
     projects: Array,
+    columnsForReopen: Array,
 });
 
 const showItemModal = ref(false);
@@ -104,6 +105,55 @@ const addComment = () => {
 };
 
 const isBug = (item) => item.type === 'bug';
+
+// Reabertura
+const showReopenModal = ref(false);
+const originalItem = ref(null);
+const reopenForm = useForm({
+    type: 'reabertura',
+    reopened_from_id: null,
+    title: '',
+    description: '',
+    justification: '',
+    priority: 'Média',
+    column_id: null,
+    project_id: null,
+    estimation: null,
+    predicted_value: null,
+    predicted_unit: 'hours',
+    assignee_ids: [],
+});
+
+const openReopenModal = () => {
+    const original = props.items.data.find(i => i.id === itemForm.id);
+    if (!original) return;
+    originalItem.value = original;
+    reopenForm.reset();
+    reopenForm.clearErrors();
+    reopenForm.type = 'reabertura';
+    reopenForm.reopened_from_id = original.id;
+    reopenForm.title = `Reabertura: ${original.title}`;
+    reopenForm.description = original.description || '';
+    reopenForm.justification = '';
+    reopenForm.priority = original.priority;
+    reopenForm.column_id = props.columnsForReopen?.[0]?.id ?? null;
+    reopenForm.project_id = original.project_id;
+    reopenForm.estimation = original.estimation;
+    reopenForm.predicted_value = original.predicted_value ?? null;
+    reopenForm.predicted_unit = original.predicted_unit ?? 'hours';
+    reopenForm.assignee_ids = (original.assignees || []).map(u => u.id);
+    showReopenModal.value = true;
+};
+
+const submitReopen = () => {
+    reopenForm.post(route('items.store'), {
+        preserveScroll: true,
+        onSuccess: () => {
+            showReopenModal.value = false;
+            closeModal();
+        },
+    });
+};
 </script>
 
 <style src="vue-multiselect/dist/vue-multiselect.css"></style>
@@ -163,7 +213,13 @@ const isBug = (item) => item.type === 'bug';
 
         <Modal :show="showItemModal" @close="closeModal" max-width="3xl">
             <div class="p-6 bg-surface-variant max-h-[90vh] overflow-y-auto">
-                <h2 class="text-2xl font-bold mb-6 text-text-main">✅ Item Concluído</h2>
+                <div class="flex items-start justify-between gap-4 mb-6">
+                    <h2 class="text-2xl font-bold text-text-main">✅ Item Concluído</h2>
+                    <button v-if="itemForm.id" type="button" @click="openReopenModal"
+                        class="px-3 py-1.5 rounded-lg text-sm font-medium bg-orange-500/10 text-orange-500 border border-orange-500/30 hover:bg-orange-500/20 transition">
+                        🔄 Reabrir card
+                    </button>
+                </div>
 
                 <div v-if="itemForm.id" class="flex gap-2 mb-6 border-b border-border-main">
                     <button @click="activeTab = 'details'" :class="['px-4 py-2 font-medium border-b-2 transition', activeTab === 'details' ? 'border-brand text-brand' : 'border-transparent text-text-muted hover:text-text-main']">📝 Detalhes</button>
@@ -272,6 +328,88 @@ const isBug = (item) => item.type === 'bug';
                         </div>
                     </div>
                 </div>
+            </div>
+        </Modal>
+
+        <!-- Sub-modal: Reabertura de card -->
+        <Modal :show="showReopenModal" @close="showReopenModal = false" max-width="3xl">
+            <div class="p-6 bg-surface-variant max-h-[90vh] overflow-y-auto">
+                <h3 class="text-2xl font-bold text-text-main mb-1">🔄 Reabrir card</h3>
+                <p class="text-sm text-text-muted mb-5" v-if="originalItem">
+                    Criando uma reabertura vinculada ao card <strong class="text-text-main">#{{ originalItem.id }} "{{ originalItem.title }}"</strong>. O card original permanecerá em Feito.
+                </p>
+
+                <form @submit.prevent="submitReopen" class="space-y-5">
+                    <div>
+                        <label class="block text-sm font-bold text-text-main mb-2">Justificativa da reabertura *</label>
+                        <textarea v-model="reopenForm.justification" rows="3" required maxlength="5000"
+                            placeholder="Por que este card precisa ser reaberto?"
+                            class="input-field w-full"></textarea>
+                        <div v-if="reopenForm.errors.justification" class="text-trello-red text-xs mt-1">{{ reopenForm.errors.justification }}</div>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-bold text-text-main mb-2">Título *</label>
+                        <input v-model="reopenForm.title" type="text" required maxlength="255" class="input-field w-full">
+                        <div v-if="reopenForm.errors.title" class="text-trello-red text-xs mt-1">{{ reopenForm.errors.title }}</div>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-bold text-text-main mb-2">Descrição</label>
+                        <textarea v-model="reopenForm.description" rows="3" class="input-field w-full"></textarea>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-bold text-text-main mb-2">Coluna inicial *</label>
+                            <select v-model="reopenForm.column_id" class="input-field w-full" required>
+                                <option v-for="col in columnsForReopen" :key="col.id" :value="col.id">{{ col.name }}</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-bold text-text-main mb-2">Prioridade</label>
+                            <select v-model="reopenForm.priority" class="input-field w-full">
+                                <option>Baixa</option><option>Média</option><option>Alta</option><option>Crítica</option>
+                            </select>
+                        </div>
+                        <div class="md:col-span-2">
+                            <label class="block text-sm font-bold text-text-main mb-2">Projeto *</label>
+                            <select v-model="reopenForm.project_id" class="input-field w-full" required>
+                                <option v-for="proj in projects" :key="proj.id" :value="proj.id">{{ proj.name }}</option>
+                            </select>
+                        </div>
+                        <div class="md:col-span-2">
+                            <label class="block text-sm font-bold text-text-main mb-2">Previsão de término <span class="font-normal text-text-muted">(opcional)</span></label>
+                            <div class="flex gap-2">
+                                <input v-model.number="reopenForm.predicted_value" type="number" min="1" max="9999"
+                                    placeholder="Quantidade" class="input-field flex-1">
+                                <select v-model="reopenForm.predicted_unit" class="input-field w-40">
+                                    <option value="minutes">Minutos</option>
+                                    <option value="hours">Horas</option>
+                                    <option value="days">Dias</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="md:col-span-2">
+                            <label class="block text-sm font-bold text-text-main mb-2">Responsáveis</label>
+                            <Multiselect
+                                v-model="reopenForm.assignee_ids"
+                                :options="users.map(u => u.id)"
+                                :custom-label="id => users.find(u => u.id === id)?.name"
+                                :multiple="true"
+                                placeholder="Selecionar responsáveis"
+                            ></Multiselect>
+                        </div>
+                    </div>
+
+                    <div class="flex justify-end gap-3 pt-4 border-t border-border-main">
+                        <button type="button" @click="showReopenModal = false" class="btn-secondary">Cancelar</button>
+                        <button type="submit" :disabled="reopenForm.processing || !reopenForm.justification || !reopenForm.title || !reopenForm.column_id"
+                            class="btn-primary disabled:opacity-50 disabled:cursor-not-allowed">
+                            🔄 Criar reabertura
+                        </button>
+                    </div>
+                </form>
             </div>
         </Modal>
 

@@ -52,16 +52,27 @@ class BoardController extends Controller
 
         $movedItems = [];
 
-        DB::transaction(function () use ($request, $doneColumnId, &$movedItems) {
-            foreach ($request->columns as $columnData) {
-                foreach ($columnData['items'] as $order => $itemId) {
-                    $item = Item::find($itemId);
-                    if ($item) {
+        try {
+            DB::transaction(function () use ($request, $doneColumnId, &$movedItems) {
+                foreach ($request->columns as $columnData) {
+                    foreach ($columnData['items'] as $order => $itemId) {
+                        $item = Item::find($itemId);
+                        if (! $item) {
+                            continue;
+                        }
 
                         $oldColumnId = $item->column_id;
+                        $newColumnId = $columnData['id'];
+
+                        // Trava: cards concluídos não podem voltar para colunas anteriores.
+                        if ($doneColumnId
+                            && $oldColumnId == $doneColumnId
+                            && $newColumnId != $doneColumnId) {
+                            abort(422, "Cards concluídos não podem voltar para colunas anteriores. Use a opção 'Reabrir' no card para criar uma reabertura vinculada.");
+                        }
 
                         $item->fill([
-                            'column_id' => $columnData['id'],
+                            'column_id' => $newColumnId,
                             'order_in_column' => $order + 1,
                         ]);
 
@@ -69,7 +80,6 @@ class BoardController extends Controller
                             $item->save();
                             $movedItems[] = $item;
                         }
-
 
                         if ($oldColumnId != $item->column_id) {
                             ItemStatusHistory::create([
@@ -83,8 +93,10 @@ class BoardController extends Controller
                         }
                     }
                 }
-            }
-        });
+            });
+        } catch (\Symfony\Component\HttpKernel\Exception\HttpException $e) {
+            throw $e;
+        }
 
         foreach ($movedItems as $item) {
             broadcast(new ItemMoved($item))->toOthers();

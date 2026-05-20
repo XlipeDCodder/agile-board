@@ -19,16 +19,44 @@ class ItemController extends Controller
         $validated = $request->validate([
             'title' => 'required|string|max:255',
             'description' => 'nullable|string',
-            'type' => 'required|in:task,bug',
+            'type' => 'required|in:task,bug,reabertura',
             'priority' => 'required|in:Baixa,Média,Alta,Crítica',
             'due_date' => 'nullable|date',
             'column_id' => 'required|exists:columns,id',
             'project_id' => 'required|exists:projects,id',
             'estimation' => 'nullable|numeric|min:0|max:20',
-            // 1. A validação agora espera um array de IDs de responsáveis
+            'predicted_value' => 'nullable|integer|min:1|max:9999',
+            'predicted_unit' => 'nullable|in:minutes,hours,days|required_with:predicted_value',
+            'reopened_from_id' => 'nullable|integer|exists:items,id',
+            'justification' => 'nullable|string|max:5000',
             'assignee_ids' => 'nullable|array',
             'assignee_ids.*' => 'integer|exists:users,id',
         ]);
+
+        // Regras específicas para reabertura
+        if ($validated['type'] === 'reabertura') {
+            if (empty($validated['reopened_from_id'])) {
+                throw \Illuminate\Validation\ValidationException::withMessages([
+                    'reopened_from_id' => 'Reaberturas precisam apontar para um card original.',
+                ]);
+            }
+            if (empty($validated['justification'])) {
+                throw \Illuminate\Validation\ValidationException::withMessages([
+                    'justification' => 'A justificativa é obrigatória para reaberturas.',
+                ]);
+            }
+            $original = Item::find($validated['reopened_from_id']);
+            $doneColumnId = \App\Models\Column::where('name', 'Feito')->value('id');
+            if (! $original || $original->column_id != $doneColumnId) {
+                throw \Illuminate\Validation\ValidationException::withMessages([
+                    'reopened_from_id' => 'Só é possível reabrir cards que estão na coluna "Feito".',
+                ]);
+            }
+        } else {
+            // Não-reaberturas não devem carregar esses campos.
+            $validated['reopened_from_id'] = null;
+            $validated['justification'] = null;
+        }
 
         // Remove os IDs dos responsáveis dos dados principais para evitar erros
         $assigneeIds = $validated['assignee_ids'] ?? [];
@@ -39,7 +67,6 @@ class ItemController extends Controller
 
         $item = Item::create($validated);
 
-        // 2. Sincroniza os responsáveis na tabela pivot
         if (!empty($assigneeIds)) {
             $item->assignees()->sync($assigneeIds);
         }
@@ -57,28 +84,38 @@ class ItemController extends Controller
 
     public function update(Request $request, Item $item)
     {
-        // 3. Autorização: Verifica se o utilizador pode ATUALIZAR os detalhes do item.
         $this->authorize('update', $item);
 
         $validated = $request->validate([
             'title' => 'required|string|max:255',
             'description' => 'nullable|string',
-            'type' => 'required|in:task,bug',
+            'type' => 'required|in:task,bug,reabertura',
             'priority' => 'required|in:Baixa,Média,Alta,Crítica',
             'due_date' => 'nullable|date',
             'column_id' => 'required|exists:columns,id',
             'project_id' => 'nullable|exists:projects,id',
             'estimation' => 'nullable|numeric|min:0|max:20',
+            'predicted_value' => 'nullable|integer|min:1|max:9999',
+            'predicted_unit' => 'nullable|in:minutes,hours,days|required_with:predicted_value',
             'assignee_ids' => 'nullable|array',
             'assignee_ids.*' => 'integer|exists:users,id',
         ]);
+
+        // Campos imutáveis: tipo, reopened_from_id e justification não podem ser
+        // alterados depois da criação. Se o cliente mandar valores diferentes,
+        // ignoramos e reportamos via validação.
+        if ($validated['type'] !== $item->type) {
+            throw \Illuminate\Validation\ValidationException::withMessages([
+                'type' => 'O tipo do card não pode ser alterado depois de criado.',
+            ]);
+        }
+        unset($validated['type']); // já confirmado igual; não reescreve.
 
         $assigneeIds = $validated['assignee_ids'] ?? null;
         unset($validated['assignee_ids']);
 
         $item->update($validated);
 
-        // 4. Se a lista de responsáveis foi enviada, verifica a permissão específica para os atribuir.
         if ($assigneeIds !== null) {
             $this->authorize('assignUsers', $item);
             $item->assignees()->sync($assigneeIds);

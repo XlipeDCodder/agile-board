@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\Column;
 use App\Models\Comment;
 use App\Models\Item;
+use App\Models\ItemBlockEvent;
 use App\Models\ItemStatusHistory;
 use App\Models\TimeEntry;
 use App\Models\User;
@@ -67,12 +68,20 @@ class CollaboratorContextBuilder
                 'type' => $item->type,
                 'priority' => $item->priority,
                 'estimation' => $item->estimation,
+                'predicted' => $this->predictedSummary($item),
                 'current_column' => $item->column?->name,
                 'project' => $item->project?->name,
                 'created_at' => $item->created_at?->toIso8601String(),
                 'is_completed' => $isCompleted,
                 'completed_at_inferred' => $completedAtInferred,
                 'is_creator' => $item->creator_id === $user->id,
+                'is_reopen' => $item->type === 'reabertura',
+                'reopened_from_id' => $item->reopened_from_id,
+                'justification' => $item->justification,
+                'is_blocked' => (bool) $item->is_blocked,
+                'blocked_reason' => $item->blocked_reason,
+                'blocked_by_item_id' => $item->blocked_by_item_id,
+                'blocked_at' => $item->blocked_at?->toIso8601String(),
                 'transitions' => $transitions,
             ];
         })->all();
@@ -138,6 +147,25 @@ class CollaboratorContextBuilder
             ->whereNotNull('completed_at')
             ->count();
 
+        // Reaberturas criadas pelo usuário (cards type=reabertura).
+        $cardsReopenedTotal = Item::whereNull('parent_id')
+            ->where('creator_id', $user->id)
+            ->where('type', 'reabertura')
+            ->count();
+
+        // Cards atualmente impedidos relacionados ao usuário (criou ou está atribuído).
+        $cardsCurrentlyBlocked = Item::whereNull('parent_id')
+            ->where('is_blocked', true)
+            ->where(function ($q) use ($user) {
+                $q->where('creator_id', $user->id)
+                    ->orWhereHas('assignees', fn ($a) => $a->where('users.id', $user->id));
+            })
+            ->count();
+
+        // Tempo médio em impedimento — pareando eventos block/unblock por item
+        // executados pelo usuário. Calcula em PHP para portabilidade entre bancos.
+        $avgHoursBlocked = $this->averageHoursBlocked($user);
+
         return [
             'collaborator' => [
                 'id' => $user->id,
@@ -161,6 +189,9 @@ class CollaboratorContextBuilder
                 'items_completed_as_assignee' => $totalCompletedAsAssignee,
                 'subtasks_created_total' => $subtasksCreated,
                 'subtasks_completed_total' => $subtasksCompleted,
+                'cards_reopened_total' => $cardsReopenedTotal,
+                'cards_currently_blocked' => $cardsCurrentlyBlocked,
+                'avg_hours_blocked' => $avgHoursBlocked,
                 'total_minutes_logged' => $totalMinutes,
                 'total_hours_logged' => round($totalMinutes / 60, 1),
                 'minutes_by_project' => $minutesByProject,
@@ -174,6 +205,69 @@ class CollaboratorContextBuilder
      * Calcula o tempo médio (em horas) que os itens do usuário ficam em cada coluna,
      * usando as transições registradas em ItemStatusHistory.
      */
+    /**
+     * Resumo da previsão de término normalizando o valor pra minutos quando
+     * possível — facilita o LLM somar ou comparar previsões.
+     */
+    private function predictedSummary(Item $item): ?array
+    {
+        if (! $item->predicted_value || ! $item->predicted_unit) {
+            return null;
+        }
+        $minutes = match ($item->predicted_unit) {
+            'minutes' => $item->predicted_value,
+            'hours' => $item->predicted_value * 60,
+            'days' => $item->predicted_value * 60 * 24,
+            default => null,
+        };
+        return [
+            'value' => (int) $item->predicted_value,
+            'unit' => $item->predicted_unit,
+            'minutes_normalized' => $minutes,
+        ];
+    }
+
+    /**
+     * Calcula o tempo médio em horas que os cards do usuário ficaram em
+     * estado de impedimento, pareando eventos blocked/unblocked em ordem.
+     */
+    private function averageHoursBlocked(User $user): ?float
+    {
+        $itemIds = Item::whereNull('parent_id')
+            ->where(function ($q) use ($user) {
+                $q->where('creator_id', $user->id)
+                    ->orWhereHas('assignees', fn ($a) => $a->where('users.id', $user->id));
+            })
+            ->pluck('id');
+
+        if ($itemIds->isEmpty()) {
+            return null;
+        }
+
+        $events = ItemBlockEvent::whereIn('item_id', $itemIds)
+            ->orderBy('item_id')
+            ->orderBy('created_at')
+            ->get(['item_id', 'event', 'created_at']);
+
+        $totalHours = 0.0;
+        $pairs = 0;
+        $grouped = $events->groupBy('item_id');
+        foreach ($grouped as $eventsForItem) {
+            $currentBlockedAt = null;
+            foreach ($eventsForItem as $e) {
+                if ($e->event === 'blocked') {
+                    $currentBlockedAt = $e->created_at;
+                } elseif ($e->event === 'unblocked' && $currentBlockedAt) {
+                    $totalHours += $currentBlockedAt->diffInMinutes($e->created_at) / 60;
+                    $pairs++;
+                    $currentBlockedAt = null;
+                }
+            }
+        }
+
+        return $pairs > 0 ? round($totalHours / $pairs, 2) : null;
+    }
+
     private function averageTimeInColumns(User $user, array $columnsById): array
     {
         $itemIds = Item::whereNull('parent_id')

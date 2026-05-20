@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\Column;
 use App\Models\Comment;
 use App\Models\Item;
+use App\Models\ItemBlockEvent;
 use App\Models\ItemStatusHistory;
 use App\Models\TimeEntry;
 use App\Models\User;
@@ -209,6 +210,66 @@ class CollaboratorTimelineBuilder
                         'item_id' => $item->id,
                     ];
                 }
+            }
+        }
+
+        // Reaberturas: cards do tipo 'reabertura' criados pelo usuário,
+        // com link para o card original e a justificativa registrada.
+        $reopens = Item::whereNull('parent_id')
+            ->where('creator_id', $user->id)
+            ->where('type', 'reabertura')
+            ->whereNotNull('reopened_from_id')
+            ->with('reopenedFrom:id,title')
+            ->get();
+
+        foreach ($reopens as $reopen) {
+            $origin = $reopen->reopenedFrom
+                ? "card #{$reopen->reopenedFrom->id} \"{$reopen->reopenedFrom->title}\""
+                : 'card desconhecido';
+            $justification = $reopen->justification ?: '(sem justificativa registrada)';
+            $events[] = [
+                'date' => $reopen->created_at?->toIso8601String(),
+                'type' => 'card_reopened',
+                'icon' => '🔄',
+                'title' => "Reabriu o {$origin} como card #{$reopen->id} \"{$reopen->title}\"",
+                'description' => "Motivo: {$justification}",
+                'actor' => $user->name,
+                'item_id' => $reopen->id,
+                'parent_id' => $reopen->reopened_from_id,
+            ];
+        }
+
+        // Eventos de bloqueio/desbloqueio executados pelo usuário.
+        $blockEvents = ItemBlockEvent::where('user_id', $user->id)
+            ->with('item:id,title', 'blockedByItem:id,title')
+            ->orderBy('created_at')
+            ->get();
+
+        foreach ($blockEvents as $be) {
+            $cardLabel = $be->item ? "card #{$be->item_id} \"{$be->item->title}\"" : "card #{$be->item_id}";
+            if ($be->event === 'blocked') {
+                $blockerLabel = $be->blockedByItem
+                    ? " (bloqueado por card #{$be->blocked_by_item_id} \"{$be->blockedByItem->title}\")"
+                    : '';
+                $events[] = [
+                    'date' => $be->created_at?->toIso8601String(),
+                    'type' => 'card_blocked',
+                    'icon' => '🚫',
+                    'title' => "Marcou o {$cardLabel} como impedido{$blockerLabel}",
+                    'description' => $be->reason ? "Motivo: {$be->reason}" : null,
+                    'actor' => $user->name,
+                    'item_id' => $be->item_id,
+                ];
+            } else {
+                $events[] = [
+                    'date' => $be->created_at?->toIso8601String(),
+                    'type' => 'card_unblocked',
+                    'icon' => '✅',
+                    'title' => "Desimpediu o {$cardLabel}",
+                    'description' => null,
+                    'actor' => $user->name,
+                    'item_id' => $be->item_id,
+                ];
             }
         }
 
