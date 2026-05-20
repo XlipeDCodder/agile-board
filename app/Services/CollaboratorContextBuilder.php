@@ -25,7 +25,15 @@ class CollaboratorContextBuilder
         $columns = Column::pluck('name', 'id')->all();
         $doneColumnId = Column::where('name', 'Feito')->value('id');
 
-        $itemsRecent = Item::with(['project:id,name', 'column:id,name'])
+        $itemsRecent = Item::with([
+                'project:id,name',
+                'column:id,name',
+                'assignees:id,name',
+                // Carrega últimos 5 comentários de cada card pra dar o "miolo" do
+                // que aconteceu nele — sem isso o LLM não consegue dizer o que
+                // o card É de fato.
+                'comments' => fn ($q) => $q->latest()->limit(5)->with('user:id,name'),
+            ])
             ->whereNull('parent_id')
             ->where(function ($q) use ($user) {
                 $q->where('creator_id', $user->id)
@@ -62,15 +70,35 @@ class CollaboratorContextBuilder
                     ?? $item->updated_at?->toIso8601String();
             }
 
+            // Truncamos a descrição para não estourar tokens em cards com texto
+            // gigante, mas mantemos o suficiente para o LLM entender o conteúdo.
+            $description = $item->description
+                ? (mb_strlen($item->description) > 800
+                    ? mb_substr($item->description, 0, 800).'…'
+                    : $item->description)
+                : null;
+
+            $commentsForItem = ($item->relationLoaded('comments') ? $item->comments : collect())
+                ->take(5)
+                ->map(fn ($c) => [
+                    'author' => $c->user?->name ?? '(desconhecido)',
+                    'at' => $c->created_at?->toIso8601String(),
+                    'snippet' => mb_strlen($c->body) > 300 ? mb_substr($c->body, 0, 300).'…' : $c->body,
+                ])->values()->all();
+
             return [
                 'id' => $item->id,
                 'title' => $item->title,
+                'description' => $description,
                 'type' => $item->type,
                 'priority' => $item->priority,
                 'estimation' => $item->estimation,
                 'predicted' => $this->predictedSummary($item),
                 'current_column' => $item->column?->name,
                 'project' => $item->project?->name,
+                'assignees' => $item->relationLoaded('assignees')
+                    ? $item->assignees->pluck('name')->all()
+                    : [],
                 'created_at' => $item->created_at?->toIso8601String(),
                 'is_completed' => $isCompleted,
                 'completed_at_inferred' => $completedAtInferred,
@@ -83,6 +111,7 @@ class CollaboratorContextBuilder
                 'blocked_by_item_id' => $item->blocked_by_item_id,
                 'blocked_at' => $item->blocked_at?->toIso8601String(),
                 'transitions' => $transitions,
+                'recent_comments' => $commentsForItem,
             ];
         })->all();
 

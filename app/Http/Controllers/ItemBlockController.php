@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Events\ItemUpdated;
 use App\Models\Item;
 use App\Models\ItemBlockEvent;
 use Illuminate\Http\Request;
@@ -41,6 +42,8 @@ class ItemBlockController extends Controller
             ]);
         });
 
+        broadcast(new ItemUpdated($item->fresh()))->toOthers();
+
         return back();
     }
 
@@ -66,6 +69,8 @@ class ItemBlockController extends Controller
                 'blocked_at' => null,
             ]);
         });
+
+        broadcast(new ItemUpdated($item->fresh()))->toOthers();
 
         return back();
     }

@@ -38,6 +38,68 @@ const blockForm = useForm({
     blocked_by_item_id: null,
 });
 
+// Toast efêmero (ex: tentou arrastar de Feito).
+const toastMessage = ref(null);
+let toastTimer = null;
+const showToast = (msg) => {
+    toastMessage.value = msg;
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => { toastMessage.value = null; }, 3500);
+};
+
+// Reabertura.
+const showReopenModal = ref(false);
+const reopenForm = useForm({
+    type: 'reabertura',
+    reopened_from_id: null,
+    title: '',
+    description: '',
+    justification: '',
+    priority: 'Média',
+    column_id: null,
+    project_id: null,
+    estimation: null,
+    predicted_value: null,
+    predicted_unit: 'hours',
+    assignee_ids: [],
+});
+
+const columnsExceptDone = computed(() =>
+    (boardColumns.value || []).filter(c => c.name !== 'Feito').map(c => ({ id: c.id, name: c.name }))
+);
+
+const isInFeito = computed(() => currentItem.value?.column?.name === 'Feito');
+
+const openReopenFromBoard = () => {
+    if (!currentItem.value) return;
+    const original = currentItem.value;
+    reopenForm.reset();
+    reopenForm.clearErrors();
+    reopenForm.type = 'reabertura';
+    reopenForm.reopened_from_id = original.id;
+    reopenForm.title = `Reabertura: ${original.title}`;
+    reopenForm.description = original.description || '';
+    reopenForm.justification = '';
+    reopenForm.priority = original.priority;
+    reopenForm.column_id = columnsExceptDone.value[0]?.id ?? null;
+    reopenForm.project_id = original.project_id;
+    reopenForm.estimation = original.estimation;
+    reopenForm.predicted_value = original.predicted_value ?? null;
+    reopenForm.predicted_unit = original.predicted_unit ?? 'hours';
+    reopenForm.assignee_ids = (original.assignees || []).map(u => u.id);
+    showReopenModal.value = true;
+};
+
+const submitReopen = () => {
+    reopenForm.post(route('items.store'), {
+        preserveScroll: true,
+        onSuccess: () => {
+            showReopenModal.value = false;
+            closeModal();
+        },
+    });
+};
+
 const allCardsFlat = computed(() => {
     const all = [];
     for (const col of boardColumns.value || []) {
@@ -86,7 +148,8 @@ onMounted(() => {
     if (window.Echo) {
         window.Echo.channel('board')
             .listen('.item.moved', debouncedReload)
-            .listen('.item.created', debouncedReload);
+            .listen('.item.created', debouncedReload)
+            .listen('.item.updated', debouncedReload);
     }
 });
 
@@ -94,14 +157,20 @@ watch(() => props.columns, (newColumns) => {
     boardColumns.value = newColumns;
     if (showItemModal.value && itemForm.id) {
         let updatedItem = null;
+        let updatedColumn = null;
         for (const column of newColumns) {
             const foundItem = column.items.find(item => item.id === itemForm.id);
             if (foundItem) {
                 updatedItem = foundItem;
+                updatedColumn = column;
                 break;
             }
         }
         if (updatedItem) {
+            // Atualiza o objeto completo do card (badges de estado do modal
+            // dependem dele) e os campos do form que podem mudar via outros
+            // endpoints (block/unblock, subtarefas, comentários).
+            currentItem.value = { ...updatedItem, column: { id: updatedColumn?.id, name: updatedColumn?.name } };
             itemForm.subtasks = updatedItem.subtasks;
             itemForm.comments = updatedItem.comments;
             itemForm.assignee_ids = updatedItem.assignees.map(user => user.id);
@@ -128,11 +197,7 @@ function onDragEnd() {
  * e destino é outra coluna qualquer.
  */
 function canMove(evt) {
-    const fromList = evt.from?.__draggable_component__?.realList
-        || evt.relatedContext?.list;
-    const toList = evt.to?.__draggable_component__?.realList
-        || evt.relatedContext?.list;
-    // Estratégia mais robusta: identifica a coluna pelos items.
+    // Estratégia: identifica a coluna pelos items (referência ao array).
     const draggedItem = evt.draggedContext?.element;
     if (!draggedItem) return true;
     const fromColumn = boardColumns.value.find(c => c.items.some(i => i.id === draggedItem.id));
@@ -140,6 +205,7 @@ function canMove(evt) {
     const toColumn = boardColumns.value.find(c => c.items === toItems);
     if (!fromColumn || !toColumn) return true;
     if (fromColumn.name === 'Feito' && toColumn.id !== fromColumn.id) {
+        showToast('🚫 Cards concluídos não podem voltar para colunas anteriores. Abra o card e clique em "🔄 Reabrir card" para criar uma reabertura vinculada.');
         return false;
     }
     return true;
@@ -207,6 +273,7 @@ const submitBlock = () => {
     blockForm.post(route('items.block', itemForm.id), {
         preserveScroll: true,
         preserveState: true,
+        only: ['columns'],
         onSuccess: () => {
             showBlockModal.value = false;
             blockForm.reset();
@@ -219,6 +286,7 @@ const unblockCard = () => {
     router.post(route('items.unblock', itemForm.id), {}, {
         preserveScroll: true,
         preserveState: true,
+        only: ['columns'],
     });
 };
 
@@ -416,14 +484,20 @@ const matchesFilter = (item) => {
                         {{ itemForm.id ? '✏️ Editar Item' : '➕ Novo Item' }}
                         <span v-if="itemForm.type === 'reabertura'" class="text-base font-medium text-orange-500 ml-2">🔄 Reabertura</span>
                     </h2>
-                    <div v-if="itemForm.id" class="flex items-center gap-2">
+                    <div v-if="itemForm.id" class="flex items-center gap-2 flex-wrap justify-end">
+                        <button v-if="isInFeito"
+                            type="button"
+                            @click="openReopenFromBoard"
+                            class="px-3 py-1.5 rounded-lg text-sm font-medium bg-orange-500/10 text-orange-500 border border-orange-500/30 hover:bg-orange-500/20 transition">
+                            🔄 Reabrir card
+                        </button>
                         <button v-if="currentItem?.is_blocked"
                             type="button"
                             @click="unblockCard"
                             class="px-3 py-1.5 rounded-lg text-sm font-medium bg-emerald-500/10 text-emerald-500 border border-emerald-500/30 hover:bg-emerald-500/20 transition">
                             ✅ Desimpedir
                         </button>
-                        <button v-else
+                        <button v-else-if="!isInFeito"
                             type="button"
                             @click="openBlockModal"
                             class="px-3 py-1.5 rounded-lg text-sm font-medium bg-trello-red/10 text-trello-red border border-trello-red/30 hover:bg-trello-red/20 transition">
@@ -583,6 +657,96 @@ const matchesFilter = (item) => {
                         </div>
                     </div>
                 </div>
+            </div>
+        </Modal>
+
+        <!-- Toast efêmero (canto inferior central) -->
+        <transition
+            enter-active-class="transition ease-out duration-200"
+            enter-from-class="opacity-0 translate-y-4"
+            enter-to-class="opacity-100 translate-y-0"
+            leave-active-class="transition ease-in duration-150"
+            leave-from-class="opacity-100 translate-y-0"
+            leave-to-class="opacity-0 translate-y-4"
+        >
+            <div v-if="toastMessage"
+                class="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 max-w-md px-4 py-3 rounded-xl bg-trello-red text-white shadow-2xl border border-trello-red/40 text-sm font-medium">
+                {{ toastMessage }}
+            </div>
+        </transition>
+
+        <!-- Sub-modal: reabrir card concluído (acessível diretamente do Board) -->
+        <Modal :show="showReopenModal" @close="showReopenModal = false" max-width="3xl">
+            <div class="p-6 bg-surface-variant max-h-[90vh] overflow-y-auto">
+                <h3 class="text-2xl font-bold text-text-main mb-1">🔄 Reabrir card</h3>
+                <p class="text-sm text-text-muted mb-5" v-if="currentItem">
+                    Criando uma reabertura vinculada ao card <strong class="text-text-main">#{{ currentItem.id }} "{{ currentItem.title }}"</strong>. O card original permanecerá em Feito.
+                </p>
+
+                <form @submit.prevent="submitReopen" class="space-y-5">
+                    <div>
+                        <label class="block text-sm font-bold text-text-main mb-2">Justificativa da reabertura *</label>
+                        <textarea v-model="reopenForm.justification" rows="3" required maxlength="5000"
+                            placeholder="Por que este card precisa ser reaberto?"
+                            class="input-field w-full"></textarea>
+                        <div v-if="reopenForm.errors.justification" class="text-trello-red text-xs mt-1">{{ reopenForm.errors.justification }}</div>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-bold text-text-main mb-2">Título *</label>
+                        <input v-model="reopenForm.title" type="text" required maxlength="255" class="input-field w-full">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-bold text-text-main mb-2">Descrição</label>
+                        <textarea v-model="reopenForm.description" rows="3" class="input-field w-full"></textarea>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-bold text-text-main mb-2">Coluna inicial *</label>
+                            <select v-model="reopenForm.column_id" class="input-field w-full" required>
+                                <option v-for="col in columnsExceptDone" :key="col.id" :value="col.id">{{ col.name }}</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-bold text-text-main mb-2">Prioridade</label>
+                            <select v-model="reopenForm.priority" class="input-field w-full">
+                                <option>Baixa</option><option>Média</option><option>Alta</option><option>Crítica</option>
+                            </select>
+                        </div>
+                        <div class="md:col-span-2">
+                            <label class="block text-sm font-bold text-text-main mb-2">Projeto *</label>
+                            <select v-model="reopenForm.project_id" class="input-field w-full" required>
+                                <option v-for="proj in projects" :key="proj.id" :value="proj.id">{{ proj.name }}</option>
+                            </select>
+                        </div>
+                        <div class="md:col-span-2">
+                            <label class="block text-sm font-bold text-text-main mb-2">Previsão de término <span class="font-normal text-text-muted">(opcional)</span></label>
+                            <div class="flex gap-2">
+                                <input v-model.number="reopenForm.predicted_value" type="number" min="1" max="9999" placeholder="Quantidade" class="input-field flex-1">
+                                <select v-model="reopenForm.predicted_unit" class="input-field w-40">
+                                    <option value="minutes">Minutos</option>
+                                    <option value="hours">Horas</option>
+                                    <option value="days">Dias</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="md:col-span-2">
+                            <label class="block text-sm font-bold text-text-main mb-2">Responsáveis</label>
+                            <Multiselect v-model="reopenForm.assignee_ids"
+                                :options="users.map(u => u.id)"
+                                :custom-label="id => users.find(u => u.id === id)?.name"
+                                :multiple="true"
+                                placeholder="Selecionar responsáveis"></Multiselect>
+                        </div>
+                    </div>
+                    <div class="flex justify-end gap-3 pt-4 border-t border-border-main">
+                        <button type="button" @click="showReopenModal = false" class="btn-secondary">Cancelar</button>
+                        <button type="submit"
+                            :disabled="reopenForm.processing || !reopenForm.justification || !reopenForm.title || !reopenForm.column_id"
+                            class="btn-primary disabled:opacity-50 disabled:cursor-not-allowed">
+                            🔄 Criar reabertura
+                        </button>
+                    </div>
+                </form>
             </div>
         </Modal>
 
