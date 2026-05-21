@@ -117,6 +117,20 @@ class GoogleClientFactory
         $client->setClientId(config('services.google.client_id'));
         $client->setClientSecret(config('services.google.client_secret'));
         $client->setRedirectUri(config('services.google.redirect_uri'));
+
+        // Reusa BOT_VERIFY_SSL (mesmo problema do PHP no Windows sem cacert.pem):
+        // por padrão verify=true; em dev local com a flag desligada, passa um
+        // Guzzle sem verificação. Em produção, esse path emite warning no log
+        // — não silencia.
+        if (! config('services.bot.verify_ssl', true)) {
+            if (app()->environment('production')) {
+                \Illuminate\Support\Facades\Log::warning(
+                    'GoogleClientFactory rodando com SSL verification desligado em produção (BOT_VERIFY_SSL=false).'
+                );
+            }
+            $client->setHttpClient(new \GuzzleHttp\Client(['verify' => false]));
+        }
+
         return $client;
     }
 }

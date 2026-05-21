@@ -10,6 +10,7 @@ use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cookie;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
@@ -17,32 +18,41 @@ class GoogleOAuthController extends Controller
 {
     public function __construct(private GoogleClientFactory $clientFactory) {}
 
+    /**
+     * Nome do cookie que carrega o state OAuth. Cookie em vez de session
+     * porque a sessão Laravel é regenerada no login — se a sessão expira
+     * durante o consent do Google, o user precisa logar de novo e o state
+     * em sessão some. Cookie sobrevive a essa regeneração.
+     */
+    private const STATE_COOKIE = 'google_oauth_state';
+
     public function connect(Request $request): RedirectResponse
     {
         $client = $this->clientFactory->unauthenticated();
-
-        // CSRF token — guardamos na sessão e revalidamos no callback.
         $state = Str::random(32);
-        $request->session()->put('google_oauth_state', $state);
         $client->setState($state);
 
-        return redirect()->away($client->createAuthUrl());
+        // Cookie HTTP-only de 10 min — tempo suficiente pro consent.
+        // O cookie é cifrado pelo EncryptCookies middleware do Laravel.
+        return redirect()->away($client->createAuthUrl())
+            ->withCookie(cookie(self::STATE_COOKIE, $state, 10));
     }
 
     public function callback(Request $request): RedirectResponse
     {
-        // Erro retornado pelo Google (ex: usuário negou consent).
         if ($request->has('error')) {
             return redirect()
                 ->route('admin.bot-config.index')
-                ->with('google_error', 'Conexão com o Google cancelada: '.$request->input('error'));
+                ->with('google_error', 'Conexão com o Google cancelada: '.$request->input('error'))
+                ->withCookie(Cookie::forget(self::STATE_COOKIE));
         }
 
-        $expectedState = $request->session()->pull('google_oauth_state');
+        $expectedState = $request->cookie(self::STATE_COOKIE);
         if (! $expectedState || $request->input('state') !== $expectedState) {
             return redirect()
                 ->route('admin.bot-config.index')
-                ->with('google_error', 'Estado OAuth inválido. Tente conectar novamente.');
+                ->with('google_error', 'Estado OAuth inválido (cookie expirou ou ausente). Tente conectar novamente.')
+                ->withCookie(Cookie::forget(self::STATE_COOKIE));
         }
 
         $code = $request->input('code');
