@@ -1,12 +1,24 @@
 <script setup>
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
-import { Head, useForm } from '@inertiajs/vue3';
-import { ref } from 'vue';
+import { Head, useForm, usePage, Link, router } from '@inertiajs/vue3';
+import { ref, computed } from 'vue';
 import axios from 'axios';
 
 const props = defineProps({
     config: Object,
+    googleConnection: Object,
+    googleOAuthConfigured: Boolean,
+    googleAllowedDomain: String,
 });
+
+const page = usePage();
+const flashSuccess = computed(() => page.props.flash?.google_success || null);
+const flashError = computed(() => page.props.flash?.google_error || null);
+
+const disconnectGoogle = () => {
+    if (!confirm('Desconectar sua conta Google? O Icarus não conseguirá mais gerar Docs/Sheets até você reconectar.')) return;
+    router.post(route('admin.google.disconnect'));
+};
 
 const form = useForm({
     provider: props.config?.provider || 'gemini',
@@ -111,6 +123,50 @@ const modelSuggestions = {
                     </button>
                 </div>
             </form>
+
+            <div class="bg-surface-variant border border-border-main rounded-2xl p-6 shadow-sm space-y-4">
+                <div>
+                    <h3 class="font-bold text-lg text-text-main flex items-center gap-2">
+                        <span>🔗</span>
+                        <span>Conexão Google Workspace</span>
+                    </h3>
+                    <p class="text-text-muted text-sm mt-1">
+                        Necessária para que o Icarus possa criar Google Docs e Sheets diretamente no <strong>seu Drive</strong>.
+                        <span v-if="googleAllowedDomain">Apenas contas <code>@{{ googleAllowedDomain }}</code> podem conectar.</span>
+                    </p>
+                </div>
+
+                <div v-if="flashSuccess" class="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-sm text-emerald-700">
+                    {{ flashSuccess }}
+                </div>
+                <div v-if="flashError" class="p-3 rounded-xl bg-trello-red/10 border border-trello-red/30 text-sm text-trello-red">
+                    {{ flashError }}
+                </div>
+
+                <div v-if="!googleOAuthConfigured" class="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-sm text-text-main">
+                    OAuth do Google ainda não foi configurado no servidor. Defina <code>GOOGLE_CLIENT_ID</code>, <code>GOOGLE_CLIENT_SECRET</code> e <code>GOOGLE_REDIRECT_URI</code> no <code>.env</code>.
+                </div>
+
+                <div v-else-if="googleConnection" class="flex items-center justify-between gap-4">
+                    <div class="text-sm">
+                        <p class="text-text-main">
+                            ✅ Conectado como <strong>{{ googleConnection.google_email }}</strong>
+                        </p>
+                        <p class="text-text-muted text-xs mt-1" v-if="googleConnection.expires_at">
+                            Sessão atual expira automaticamente; o token é renovado quando necessário.
+                        </p>
+                    </div>
+                    <button type="button" @click="disconnectGoogle" class="btn-secondary">
+                        Desconectar
+                    </button>
+                </div>
+
+                <div v-else>
+                    <a :href="route('admin.google.connect')" class="btn-primary inline-block">
+                        Conectar Google
+                    </a>
+                </div>
+            </div>
         </div>
     </AuthenticatedLayout>
 </template>

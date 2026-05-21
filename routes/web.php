@@ -12,6 +12,7 @@ use App\Http\Controllers\Admin\ColumnManagementController;
 use App\Http\Controllers\Admin\ReportController;
 use App\Http\Controllers\Admin\BotConfigController;
 use App\Http\Controllers\Admin\IcarusController;
+use App\Http\Controllers\Admin\GoogleOAuthController;
 use App\Http\Controllers\CommentController;
 use App\Http\Controllers\ItemBlockController;
 use Illuminate\Support\Facades\Route;
@@ -66,6 +67,10 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
     Route::get('bot-config', [BotConfigController::class, 'index'])->name('bot-config.index');
     Route::put('bot-config', [BotConfigController::class, 'update'])->name('bot-config.update');
     Route::post('bot-config/test', [BotConfigController::class, 'test'])->name('bot-config.test');
+
+    Route::get('google/oauth/connect', [GoogleOAuthController::class, 'connect'])->name('google.connect');
+    Route::get('google/oauth/callback', [GoogleOAuthController::class, 'callback'])->name('google.callback');
+    Route::post('google/oauth/disconnect', [GoogleOAuthController::class, 'disconnect'])->name('google.disconnect');
 });
 
 require __DIR__.'/auth.php';

@@ -8,6 +8,10 @@ class Project extends Model
 {
     protected $fillable = ['name', 'description', 'due_date', 'status'];
 
+    protected $casts = [
+        'due_date' => 'date',
+    ];
+
     public function items()
     {
         return $this->hasMany(Item::class);

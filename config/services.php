@@ -42,4 +42,13 @@ return [
         'verify_ssl' => env('BOT_VERIFY_SSL', true),
     ],
 
+    'google' => [
+        'client_id' => env('GOOGLE_CLIENT_ID'),
+        'client_secret' => env('GOOGLE_CLIENT_SECRET'),
+        'redirect_uri' => env('GOOGLE_REDIRECT_URI'),
+        // Apenas usuários cujo email termina com este domínio podem conectar
+        // a conta Google e usar as ferramentas do Icarus que mexem no Drive.
+        'allowed_domain' => env('GOOGLE_ALLOWED_DOMAIN'),
+    ],
+
 ];

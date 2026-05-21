@@ -6,10 +6,26 @@ import DOMPurify from 'dompurify';
 
 marked.setOptions({ breaks: true, gfm: true });
 
+// Hook do DOMPurify: links que apontam pra fora abrem em nova aba e ganham
+// rel="noopener noreferrer". Links pra docs.google.com (saída de tools)
+// recebem um ícone discreto pra deixar visualmente claro que é arquivo.
+DOMPurify.addHook('afterSanitizeAttributes', (node) => {
+    if (node.tagName !== 'A') return;
+    const href = node.getAttribute('href') || '';
+    if (!/^https?:/i.test(href)) return;
+    node.setAttribute('target', '_blank');
+    node.setAttribute('rel', 'noopener noreferrer');
+    if (href.includes('docs.google.com/document/')) {
+        node.textContent = '📄 ' + node.textContent;
+    } else if (href.includes('docs.google.com/spreadsheets/')) {
+        node.textContent = '📊 ' + node.textContent;
+    }
+});
+
 const renderMarkdown = (text) => {
     if (!text) return '';
     const raw = marked.parse(text);
-    return DOMPurify.sanitize(raw);
+    return DOMPurify.sanitize(raw, { ADD_ATTR: ['target', 'rel'] });
 };
 
 const props = defineProps({

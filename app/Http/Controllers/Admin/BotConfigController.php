@@ -14,9 +14,13 @@ use Inertia\Response;
 
 class BotConfigController extends Controller
 {
-    public function index(): Response
+    public function index(Request $request): Response
     {
         $config = BotConfig::active();
+        $user = $request->user();
+        $token = $user?->googleToken;
+        $allowedDomain = config('services.google.allowed_domain');
+        $oauthConfigured = (bool) config('services.google.client_id') && (bool) config('services.google.client_secret');
 
         return Inertia::render('Admin/BotConfig/Index', [
             'config' => $config ? [
@@ -26,6 +30,12 @@ class BotConfigController extends Controller
                 'has_api_key' => true,
                 'updated_at' => $config->updated_at?->toIso8601String(),
             ] : null,
+            'googleConnection' => $token ? [
+                'google_email' => $token->google_email,
+                'expires_at' => $token->expires_at?->toIso8601String(),
+            ] : null,
+            'googleOAuthConfigured' => $oauthConfigured,
+            'googleAllowedDomain' => $allowedDomain,
         ]);
     }
 
@@ -59,10 +69,11 @@ class BotConfigController extends Controller
 
         try {
             $provider = $factory->make($validated['provider'], $validated['api_key'], $validated['model']);
-            $reply = $provider->chat(
+            $response = $provider->chat(
                 'Você é um teste de conexão. Responda apenas: OK',
                 [['role' => 'user', 'content' => 'ping']],
             );
+            $reply = $response->text ?? '(resposta sem texto)';
 
             return response()->json([
                 'ok' => true,

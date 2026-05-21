@@ -14,16 +14,9 @@ class GeminiProvider implements BotProviderInterface
     ) {
     }
 
-    public function chat(string $systemPrompt, array $messages): string
+    public function chat(string $systemPrompt, array $messages, array $tools = []): ChatResponse
     {
-        $contents = [];
-        foreach ($messages as $msg) {
-            $role = ($msg['role'] ?? 'user') === 'assistant' ? 'model' : 'user';
-            $contents[] = [
-                'role' => $role,
-                'parts' => [['text' => $msg['content'] ?? '']],
-            ];
-        }
+        $contents = $this->buildContents($messages);
 
         $payload = [
             'systemInstruction' => [
@@ -36,12 +29,17 @@ class GeminiProvider implements BotProviderInterface
             ],
         ];
 
+        if (! empty($tools)) {
+            $payload['tools'] = [
+                ['functionDeclarations' => $tools],
+            ];
+        }
+
         $url = sprintf(
             'https://generativelanguage.googleapis.com/v1beta/models/%s:generateContent',
             urlencode($this->model),
         );
 
-        // Aviso de segurança: SSL desligado em produção é MITM aberto.
         if (! $this->verifySsl && app()->environment('production')) {
             Log::warning('GeminiProvider rodando com SSL verification desligado em produção (BOT_VERIFY_SSL=false).');
         }
@@ -64,14 +62,71 @@ class GeminiProvider implements BotProviderInterface
             );
         }
 
-        $text = $response->json('candidates.0.content.parts.0.text');
-
-        if (! is_string($text) || $text === '') {
-            $finishReason = $response->json('candidates.0.finishReason') ?? 'desconhecido';
-            throw new BotException("Resposta vazia do Gemini (motivo: {$finishReason}).");
+        // O Gemini pode retornar várias parts; procuramos primeiro um
+        // functionCall (prioridade) e caímos pra text se não houver.
+        $parts = $response->json('candidates.0.content.parts') ?? [];
+        foreach ($parts as $part) {
+            if (isset($part['functionCall']['name'])) {
+                return ChatResponse::functionCall(
+                    name: $part['functionCall']['name'],
+                    args: $part['functionCall']['args'] ?? [],
+                );
+            }
         }
 
-        return $text;
+        $text = $response->json('candidates.0.content.parts.0.text');
+        if (is_string($text) && $text !== '') {
+            return ChatResponse::text($text);
+        }
+
+        $finishReason = $response->json('candidates.0.finishReason') ?? 'desconhecido';
+        throw new BotException("Resposta vazia do Gemini (motivo: {$finishReason}).");
+    }
+
+    /**
+     * Converte o histórico abstrato em "contents" no formato Gemini.
+     * Suporta 3 tipos de mensagem: texto, function_call (turn do model
+     * que pediu execução) e function_response (resultado da execução).
+     */
+    private function buildContents(array $messages): array
+    {
+        $contents = [];
+        foreach ($messages as $msg) {
+            $role = $msg['role'] ?? 'user';
+
+            if (isset($msg['function_call'])) {
+                $contents[] = [
+                    'role' => 'model',
+                    'parts' => [[
+                        'functionCall' => [
+                            'name' => $msg['function_call']['name'],
+                            'args' => $msg['function_call']['args'] ?? new \stdClass(),
+                        ],
+                    ]],
+                ];
+                continue;
+            }
+
+            if ($role === 'function') {
+                $contents[] = [
+                    'role' => 'user',
+                    'parts' => [[
+                        'functionResponse' => [
+                            'name' => $msg['name'] ?? '',
+                            'response' => $msg['response'] ?? new \stdClass(),
+                        ],
+                    ]],
+                ];
+                continue;
+            }
+
+            $geminiRole = $role === 'assistant' ? 'model' : 'user';
+            $contents[] = [
+                'role' => $geminiRole,
+                'parts' => [['text' => (string) ($msg['content'] ?? '')]],
+            ];
+        }
+        return $contents;
     }
 
     /**
@@ -81,11 +136,8 @@ class GeminiProvider implements BotProviderInterface
      */
     private function sanitizeError(string $message): string
     {
-        // Remove URLs inteiras (mensagens de erro do cURL/Guzzle costumam citar a URL).
         $message = preg_replace('/https?:\/\/\S+/i', '[url-removida]', $message);
-        // Remove qualquer ?key=... ou &key=... que tenha sobrado.
         $message = preg_replace('/[?&]key=[^\s&]+/i', '?key=[removida]', $message);
-        // Remove a própria api_key caso ela apareça crua na mensagem.
         if ($this->apiKey !== '') {
             $message = str_replace($this->apiKey, '[api-key-removida]', $message);
         }
