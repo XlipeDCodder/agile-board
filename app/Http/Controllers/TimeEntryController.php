@@ -13,22 +13,25 @@ class TimeEntryController extends Controller
     public function index()
     {
         $user = Auth::user();
-        
-        // Fetch entries for the current user, maybe filter by month if we want optimization later
+
         $entries = TimeEntry::where('user_id', $user->id)
-            ->with('item.project') // Eager load item and project info
+            ->with('item.project')
             ->get();
 
-        // Fetch items assigned to the user OR unassigned/open items that they might work on
-        // For simplicity, let's allow them to log time on any item they are assigned to, or any item in general?
-        // User request: "indicar qual ou quais cards trabalhou"
-        // Let's provide all items for now, or filter by active columns. 
-        // Better: Items assigned to user OR allow searching. 
-        // Simplest valid path: All items not in "Done" or just All Items. 
-        // Let's return Items where user is assignee OR items created by user.
-        $items = Item::whereHas('assignees', function($q) use ($user) {
-            $q->where('id', $user->id);
-        })->orWhere('creator_id', $user->id)->with(['project', 'column'])->get();
+        // Apontamento só rola contra CARDS (parent_id IS NULL). Subtarefas
+        // não são unidade de trabalho independente — o tempo gasto numa
+        // subtarefa é apontado no card pai. Sem o whereNull, a lista mostrava
+        // subtarefas como se fossem cards e o filtro de coluna no front
+        // ("Em Aberto" vs "Feito") trazia subtarefa do card já concluído
+        // como "em aberto", porque a subtarefa mantém o column_id de quando
+        // foi criada.
+        $items = Item::whereNull('parent_id')
+            ->where(function ($q) use ($user) {
+                $q->whereHas('assignees', fn ($a) => $a->where('users.id', $user->id))
+                    ->orWhere('creator_id', $user->id);
+            })
+            ->with(['project', 'column'])
+            ->get();
 
         return Inertia::render('TimeEntries/Index', [
             'entries' => $entries,
@@ -44,6 +47,13 @@ class TimeEntryController extends Controller
             'hours' => 'required|integer|min:0',
             'minutes' => 'required|integer|min:0|max:59',
         ]);
+
+        // Defesa em profundidade: o frontend só lista cards, mas se alguém
+        // burlar via Postman/cURL e mandar item_id de subtarefa, rejeita aqui.
+        $item = Item::find($request->item_id);
+        if ($item && $item->parent_id !== null) {
+            return back()->withErrors(['item_id' => 'Não é possível apontar horas diretamente numa subtarefa — use o card pai.']);
+        }
 
         $user = Auth::user();
         $date = $request->date;
