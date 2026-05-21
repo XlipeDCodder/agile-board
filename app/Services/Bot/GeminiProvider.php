@@ -100,7 +100,7 @@ class GeminiProvider implements BotProviderInterface
                     'parts' => [[
                         'functionCall' => [
                             'name' => $msg['function_call']['name'],
-                            'args' => $msg['function_call']['args'] ?? new \stdClass(),
+                            'args' => $this->asObject($msg['function_call']['args'] ?? null),
                         ],
                     ]],
                 ];
@@ -113,7 +113,7 @@ class GeminiProvider implements BotProviderInterface
                     'parts' => [[
                         'functionResponse' => [
                             'name' => $msg['name'] ?? '',
-                            'response' => $msg['response'] ?? new \stdClass(),
+                            'response' => $this->asObject($msg['response'] ?? null),
                         ],
                     ]],
                 ];
@@ -127,6 +127,24 @@ class GeminiProvider implements BotProviderInterface
             ];
         }
         return $contents;
+    }
+
+    /**
+     * Garante que um valor vai ser serializado como objeto JSON, não como
+     * array. O Gemini espera objetos em `functionCall.args` e
+     * `functionResponse.response`; quando esses vêm vazios, json_encode
+     * de um array PHP vazio vira `[]`, que o proto recusa com
+     * "cannot start list".
+     */
+    private function asObject($value): \stdClass|array
+    {
+        if (is_array($value) && empty($value)) {
+            return new \stdClass();
+        }
+        if ($value === null) {
+            return new \stdClass();
+        }
+        return $value;
     }
 
     /**
