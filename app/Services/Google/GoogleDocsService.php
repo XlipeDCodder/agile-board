@@ -22,12 +22,10 @@ class GoogleDocsService
         $client = $this->clientFactory->forUser($user);
         $docs = new Docs($client);
 
-        // 1) Cria doc vazio.
         $doc = $docs->documents->create(new Document(['title' => $title]));
         $docId = $doc->getDocumentId();
 
-        // 2) Converte markdown em requests pro batchUpdate.
-        $requests = $this->markdownToRequests($markdownBody);
+        $requests = $this->markdownToRequests($markdownBody, 1);
 
         if (! empty($requests)) {
             $docs->documents->batchUpdate($docId, new BatchUpdateDocumentRequest([
@@ -43,16 +41,98 @@ class GoogleDocsService
     }
 
     /**
-     * Parser super-simples de markdown → requests do Docs API.
-     * Suporte: headings (# ## ###), parágrafos, listas (- ).
-     * Negrito (**) e tabelas viram texto cru (V1).
+     * Anexa markdown ao FIM do doc existente. Útil pra "adiciona assinatura",
+     * "adiciona uma nova seção", etc.
+     *
+     * @return array{file_id: string, file_url: string, title: string}
      */
-    private function markdownToRequests(string $markdown): array
+    public function appendToDoc(User $user, string $fileId, string $markdownBody): array
+    {
+        $client = $this->clientFactory->forUser($user);
+        $docs = new Docs($client);
+
+        // Lê o doc pra descobrir o endIndex do body. O Google sempre mantém um
+        // newline final, então o último índice "seguro" é endIndex - 1.
+        $doc = $docs->documents->get($fileId);
+        $body = $doc->getBody();
+        $content = $body->getContent();
+        $lastEnd = 1;
+        foreach ($content as $element) {
+            if ($element->getEndIndex() !== null) {
+                $lastEnd = $element->getEndIndex();
+            }
+        }
+        $insertAt = max(1, $lastEnd - 1);
+
+        // Adiciona uma quebra de linha de "separação" antes do conteúdo novo
+        // pra ele não emendar visualmente no parágrafo anterior.
+        $body = "\n".$markdownBody;
+        $requests = $this->markdownToRequests($body, $insertAt);
+
+        if (! empty($requests)) {
+            $docs->documents->batchUpdate($fileId, new BatchUpdateDocumentRequest([
+                'requests' => $requests,
+            ]));
+        }
+
+        return [
+            'file_id' => $fileId,
+            'file_url' => "https://docs.google.com/document/d/{$fileId}/edit",
+            'title' => $doc->getTitle(),
+        ];
+    }
+
+    /**
+     * Substitui todas as ocorrências de `find` por `replace` no doc inteiro.
+     * Case-sensitive (Docs API default). Se nada bater, retorna 0 ocorrências
+     * no campo `replacements_count`.
+     *
+     * @return array{file_id: string, file_url: string, title: string, replacements_count: int}
+     */
+    public function replaceInDoc(User $user, string $fileId, string $find, string $replace): array
+    {
+        $client = $this->clientFactory->forUser($user);
+        $docs = new Docs($client);
+
+        $response = $docs->documents->batchUpdate($fileId, new BatchUpdateDocumentRequest([
+            'requests' => [
+                new DocsRequest([
+                    'replaceAllText' => [
+                        'containsText' => ['text' => $find, 'matchCase' => true],
+                        'replaceText' => $replace,
+                    ],
+                ]),
+            ],
+        ]));
+
+        $replies = $response->getReplies();
+        $count = 0;
+        if ($replies && count($replies) > 0) {
+            $first = $replies[0];
+            if (method_exists($first, 'getReplaceAllText') && $first->getReplaceAllText()) {
+                $count = (int) $first->getReplaceAllText()->getOccurrencesChanged();
+            }
+        }
+
+        $doc = $docs->documents->get($fileId);
+
+        return [
+            'file_id' => $fileId,
+            'file_url' => "https://docs.google.com/document/d/{$fileId}/edit",
+            'title' => $doc->getTitle(),
+            'replacements_count' => $count,
+        ];
+    }
+
+    /**
+     * Parser super-simples de markdown → requests do Docs API, gerando
+     * conteúdo a partir de $startIndex (1 pra docs novos, endIndex-1 pra
+     * append em docs existentes).
+     */
+    private function markdownToRequests(string $markdown, int $startIndex): array
     {
         $lines = explode("\n", $markdown);
 
-        // Acumulamos o texto puro + uma lista de "ranges" que precisam de
-        // formatação específica (heading 1/2/3, list bullet).
         $text = '';
         $rangesH1 = [];
         $rangesH2 = [];
@@ -78,12 +158,9 @@ class GoogleDocsService
                 $content = $m[1];
                 $kind = 'bullet';
             } elseif (preg_match('/^---$/', $line)) {
-                // separador horizontal — vira parágrafo vazio
                 $content = '';
             }
 
-            // Captura ranges de **negrito** dentro do conteúdo já limpo.
-            // Substitui ** por vazio e remarca o offset.
             $cleanContent = '';
             $i = 0;
             $boldOpen = null;
@@ -106,7 +183,7 @@ class GoogleDocsService
             }
 
             $text .= $cleanContent."\n";
-            $end = mb_strlen($text); // inclui o \n
+            $end = mb_strlen($text);
 
             if ($kind === 'h1') $rangesH1[] = [$start, $end];
             if ($kind === 'h2') $rangesH2[] = [$start, $end];
@@ -120,17 +197,14 @@ class GoogleDocsService
             return $requests;
         }
 
-        // Insere todo o texto de uma vez no índice 1 (logo após o início do body).
         $requests[] = new DocsRequest([
             'insertText' => [
-                'location' => ['index' => 1],
+                'location' => ['index' => $startIndex],
                 'text' => $text,
             ],
         ]);
 
-        // Os offsets dos ranges acima são "no texto"; no doc, eles começam em 1
-        // (porque o índice 1 é onde inserimos), então deslocamos +1.
-        $shift = fn ($r) => [$r[0] + 1, $r[1] + 1];
+        $shift = fn ($r) => [$r[0] + $startIndex, $r[1] + $startIndex];
 
         foreach ($rangesH1 as $r) {
             $r = $shift($r);

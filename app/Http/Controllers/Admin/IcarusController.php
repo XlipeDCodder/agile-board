@@ -112,19 +112,33 @@ class IcarusController extends Controller
             ? <<<'TOOLS'
 
 FERRAMENTAS DISPONÍVEIS (function calling):
-Você tem acesso a 4 ferramentas que criam arquivos no Google Drive do gestor logado (não do colaborador em foco). Use-as quando o gestor pedir explicitamente um relatório, planilha, documento, export, etc.:
+Você tem acesso a ferramentas que mexem com Docs e Sheets no Google Drive do gestor logado (não do colaborador em foco). Use-as quando o gestor pedir explicitamente um relatório, planilha, edição, etc.
+
+CRIAÇÃO:
 - `generate_collaborator_doc` — cria um Google Doc com relatório de produtividade DO COLABORADOR EM FOCO (este chat). Sem parâmetros.
-- `generate_collaborator_sheet` — cria uma Google Sheet com a lista de cards DO COLABORADOR EM FOCO (este chat). Sem parâmetros.
-- `generate_project_doc` — cria um Google Doc de UM PROJETO específico. Requer `project_id`. Se o gestor citar o projeto pelo nome, peça o ID antes de chamar — você não tem acesso direto à lista de projetos por aqui.
+- `generate_collaborator_sheet` — cria uma Google Sheet com a lista de cards DO COLABORADOR EM FOCO. Sem parâmetros.
+- `generate_project_doc` — cria um Google Doc de UM PROJETO específico. Requer `project_id`.
 - `generate_project_timeline_sheet` — cria uma Google Sheet com a timeline cronológica de eventos de UM PROJETO. Requer `project_id`.
 
-Depois que a ferramenta executar, você recebe um JSON com `file_url` (link) e `title`. Responda ao gestor confirmando o que foi gerado e cite o link em Markdown: `[título](file_url)`. Se vier `error`, explique a falha de forma humana e (se houver `reconnect_required: true`) sugira reconectar o Google em Bot Config.
+EDIÇÃO (só funcionam em arquivos QUE O ICARUS criou — qualquer outro retorna erro 403):
+- `append_to_doc(file, markdown)` — anexa conteúdo Markdown ao FIM de um doc existente. Use pra "adiciona uma assinatura", "põe uma seção a mais", etc.
+- `replace_in_doc(file, find, replace)` — substitui todas as ocorrências de um texto por outro. Case-sensitive.
+- `append_rows_to_sheet(file, rows)` — anexa linhas no FIM da primeira aba. `rows` é array de array de strings.
+- `update_sheet_range(file, range, values)` — sobrescreve um range A1 específico (ex: "A1:C5") com novos valores.
+- `trash_drive_file(file)` — move o arquivo pra LIXEIRA (reversível por 30 dias).
 
-NÃO chame uma ferramenta sem o gestor ter pedido explicitamente um arquivo. Perguntas tipo "como está o Felipe?" são respondidas com texto, não com geração de arquivo.
+Em todas as ferramentas de edição/lixeira, `file` aceita TANTO a URL completa do Google Drive QUANTO apenas o ID. Se o gestor te der um link, passe ele direto pro parâmetro.
+
+REGRAS DE COMPORTAMENTO:
+1. NÃO chame uma ferramenta sem o gestor ter pedido explicitamente uma ação sobre arquivo. "Como está o Felipe?" é resposta em texto, não geração de arquivo.
+2. Se o gestor pedir algo que requer `project_id` mas não informar o ID, PERGUNTE qual é o ID — NÃO ofereça uma alternativa diferente do que ele pediu (ex: não substitua "planilha do projeto X" por "planilha do colaborador Y").
+3. Antes de chamar `trash_drive_file`, CONFIRME com o gestor caso a intenção não esteja explícita (ex: se ele disse "apaga", pode chamar direto; se ele disse "será que isso deveria estar aí?", pergunte primeiro).
+4. Depois que a ferramenta executa, você recebe um JSON. Em sucesso: confira `file_url`/`title` e cite o link em Markdown — `[título](file_url)`. Em erro (`error` presente): explique de forma humana; se vier `reconnect_required: true`, oriente o gestor a reconectar o Google em Bot Config.
+5. Se o gestor passar um link de um arquivo que VOCÊ CRIOU NESTA SESSÃO ou em sessão anterior, pode usar o link direto — só não tente editar arquivos que não vieram do Icarus (a tool vai retornar 403 e você explica isso).
 TOOLS
             : <<<'NOTOOLS'
 
-GERAÇÃO DE RELATÓRIOS: o gestor logado AINDA NÃO conectou a conta Google Workspace, então você não pode criar Google Docs ou Sheets agora. Se o gestor pedir um relatório/planilha, oriente-o a abrir "Bot Config" no menu admin e clicar em "Conectar Google".
+GERAÇÃO DE RELATÓRIOS: o gestor logado AINDA NÃO conectou a conta Google Workspace, então você não pode criar nem editar Google Docs/Sheets agora. Se o gestor pedir algo nesse sentido, oriente-o a abrir "Bot Config" no menu admin e clicar em "Conectar Google".
 NOTOOLS;
 
         return <<<PROMPT

@@ -81,4 +81,63 @@ class GoogleSheetsService
             'title' => $title,
         ];
     }
+
+    /**
+     * Anexa linhas ao final da primeira aba da planilha. O Sheets API encontra
+     * a primeira linha vazia automaticamente.
+     *
+     * @param  array<int,array<int,string>>  $rows
+     * @return array{file_id: string, file_url: string, title: string, rows_appended: int}
+     */
+    public function appendRows(User $user, string $fileId, array $rows): array
+    {
+        $client = $this->clientFactory->forUser($user);
+        $sheets = new Sheets($client);
+
+        $sheets->spreadsheets_values->append(
+            $fileId,
+            'A1',
+            new ValueRange(['values' => $rows]),
+            ['valueInputOption' => 'USER_ENTERED', 'insertDataOption' => 'INSERT_ROWS'],
+        );
+
+        $spreadsheet = $sheets->spreadsheets->get($fileId);
+
+        return [
+            'file_id' => $fileId,
+            'file_url' => "https://docs.google.com/spreadsheets/d/{$fileId}/edit",
+            'title' => $spreadsheet->getProperties()->getTitle(),
+            'rows_appended' => count($rows),
+        ];
+    }
+
+    /**
+     * Atualiza um range específico (ex: "A1:C5", "Sheet2!B3") com novos valores.
+     * Sobrescreve o conteúdo existente no range.
+     *
+     * @param  array<int,array<int,string>>  $values
+     * @return array{file_id: string, file_url: string, title: string, range: string, updated_cells: int}
+     */
+    public function updateRange(User $user, string $fileId, string $range, array $values): array
+    {
+        $client = $this->clientFactory->forUser($user);
+        $sheets = new Sheets($client);
+
+        $response = $sheets->spreadsheets_values->update(
+            $fileId,
+            $range,
+            new ValueRange(['values' => $values]),
+            ['valueInputOption' => 'USER_ENTERED'],
+        );
+
+        $spreadsheet = $sheets->spreadsheets->get($fileId);
+
+        return [
+            'file_id' => $fileId,
+            'file_url' => "https://docs.google.com/spreadsheets/d/{$fileId}/edit",
+            'title' => $spreadsheet->getProperties()->getTitle(),
+            'range' => $range,
+            'updated_cells' => (int) $response->getUpdatedCells(),
+        ];
+    }
 }
