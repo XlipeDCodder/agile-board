@@ -142,11 +142,8 @@ class ProjectTimelineBuilder
             ];
 
             if ($subtask->completed_at) {
-                $completedAt = $subtask->completed_at instanceof \Carbon\Carbon
-                    ? $subtask->completed_at->toIso8601String()
-                    : (string) $subtask->completed_at;
                 $events[] = [
-                    'date' => $completedAt,
+                    'date' => $subtask->completed_at->toIso8601String(),
                     'type' => 'subtask_completed',
                     'icon' => '✔️',
                     'title' => "Subtarefa \"{$subtask->title}\" do {$parentRef} concluída",

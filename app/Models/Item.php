@@ -45,6 +45,8 @@ class Item extends Model
     protected $casts = [
         'is_blocked' => 'boolean',
         'blocked_at' => 'datetime',
+        'completed_at' => 'datetime',
+        'due_date' => 'date',
         'predicted_value' => 'integer',
     ];
 
