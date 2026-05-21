@@ -158,7 +158,7 @@ class ProjectContextBuilder
                 'name' => $project->name,
                 'description' => $project->description,
                 'status' => $project->status,
-                'due_date' => $project->due_date?->toDateString(),
+                'due_date' => $project->due_date, // string YYYY-MM-DD direto do DB (sem cast)
                 'created_at' => $project->created_at?->toIso8601String(),
             ],
             'window' => [

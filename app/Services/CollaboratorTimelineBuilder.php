@@ -270,16 +270,24 @@ class CollaboratorTimelineBuilder
             }
         }
 
+        // Agrupa apontamentos por dia trabalhado (campo `date`) somando minutos.
+        // O timestamp do EVENTO na timeline é o último apontamento daquele dia
+        // (`MAX(created_at)`) — quando o usuário registrou no sistema. Isso evita
+        // que o evento apareça antes do login (era fixado em 12:00 UTC = 09:00 BRT
+        // independente da hora real do apontamento).
         $entriesByDate = TimeEntry::where('user_id', $user->id)
-            ->selectRaw('date, SUM(minutes) as total_minutes')
+            ->selectRaw('date, SUM(minutes) as total_minutes, MAX(created_at) as last_logged_at')
             ->groupBy('date')
             ->orderBy('date')
             ->get();
 
         foreach ($entriesByDate as $row) {
             $hours = round(((int) $row->total_minutes) / 60, 1);
+            $when = $row->last_logged_at
+                ? \Carbon\Carbon::parse($row->last_logged_at)->toIso8601String()
+                : $row->date.'T12:00:00Z'; // fallback p/ dados antigos sem created_at
             $events[] = [
-                'date' => $row->date.'T12:00:00Z',
+                'date' => $when,
                 'type' => 'time_logged',
                 'icon' => '⏱️',
                 'title' => "Apontou {$hours}h no dia ".date('d/m/Y', strtotime($row->date)),

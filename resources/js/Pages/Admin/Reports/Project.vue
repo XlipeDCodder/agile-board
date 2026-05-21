@@ -23,6 +23,13 @@ const statusLabel = {
     open: 'Em andamento',
     completed: 'Concluído',
 };
+
+const formatDate = (dateString) => {
+    if (!dateString) return '—';
+    const [year, month, day] = String(dateString).split('-');
+    if (!year || !month || !day) return dateString;
+    return new Date(year, month - 1, parseInt(day, 10)).toLocaleDateString('pt-BR');
+};
 </script>
 
 <template>
@@ -64,7 +71,7 @@ const statusLabel = {
                     </div>
                     <div class="bg-surface rounded-xl p-4 border border-border-main">
                         <div class="text-xs text-text-muted">Prazo</div>
-                        <div class="text-2xl font-bold text-text-main">{{ project.due_date || '—' }}</div>
+                        <div class="text-2xl font-bold text-text-main">{{ formatDate(project.due_date) }}</div>
                     </div>
                 </div>
             </div>

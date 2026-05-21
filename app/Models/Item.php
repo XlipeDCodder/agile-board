@@ -46,8 +46,11 @@ class Item extends Model
         'is_blocked' => 'boolean',
         'blocked_at' => 'datetime',
         'completed_at' => 'datetime',
-        'due_date' => 'date',
         'predicted_value' => 'integer',
+        // due_date NÃO tem cast: o DB já guarda como DATE (string YYYY-MM-DD)
+        // e o frontend faz split('-') esperando esse formato. Castar como
+        // 'date' faria Carbon serializar como ISO completo no Inertia e
+        // quebraria o parsing no Vue (NaN → Invalid Date).
     ];
 
     /**
