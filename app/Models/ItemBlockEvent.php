@@ -15,6 +15,7 @@ class ItemBlockEvent extends Model
         'reason',
         'blocked_by_item_id',
         'user_id',
+        'created_at',
     ];
 
     protected $casts = [

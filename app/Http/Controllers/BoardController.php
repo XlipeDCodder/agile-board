@@ -102,6 +102,7 @@ class BoardController extends Controller
                                     'reason' => $item->blocked_reason,
                                     'blocked_by_item_id' => $item->blocked_by_item_id,
                                     'user_id' => \Illuminate\Support\Facades\Auth::id(),
+                                    'created_at' => now(),
                                 ]);
                                 $item->update([
                                     'is_blocked' => false,

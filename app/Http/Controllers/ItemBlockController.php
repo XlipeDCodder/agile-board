@@ -32,6 +32,7 @@ class ItemBlockController extends Controller
                 'reason' => $validated['reason'],
                 'blocked_by_item_id' => $validated['blocked_by_item_id'] ?? null,
                 'user_id' => Auth::id(),
+                'created_at' => now(),
             ]);
 
             $item->update([
@@ -60,6 +61,7 @@ class ItemBlockController extends Controller
                 'reason' => $item->blocked_reason, // preserva motivo do bloqueio anterior pro histórico
                 'blocked_by_item_id' => $item->blocked_by_item_id,
                 'user_id' => Auth::id(),
+                'created_at' => now(),
             ]);
 
             $item->update([
