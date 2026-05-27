@@ -1,19 +1,18 @@
 # =============================================================================
 # Stack do agile-board (sistema interno B-Agile).
 #
-# Topologia: nginx termina SSL na 443 e faz reverse proxy pros containers
+# Topologia: nginx termina SSL na 8443 e faz reverse proxy pros containers
 # internos (app:8000 e reverb:8080). Postgres e Redis expostos em portas
 # alternativas pra coexistir com outro Laravel já no host.
 #
 # Portas externas:
-#   - HTTPS:    443   (nginx — proxy pra app/reverb)
-#   - HTTP:     80    (nginx — redirect 301 pra HTTPS)
+#   - HTTPS:    8443  (nginx — proxy pra app/reverb)
 #   - Postgres: 5433  (interno 5432)
 #   - Redis:    6380  (interno 6379)
 #
-# Se 443/80 já estiverem ocupadas pelo outro stack, troque pra 8443:443
-# e 8001:80 abaixo no serviço nginx — vai mudar a URL pra
-# https://agileboard.salvador.ba.gov.br:8443
+# URL de acesso: https://agileboard.salvador.ba.gov.br:8443
+# Sem mapear a 80 porque outro Laravel já a usa no host. Sem redirect
+# HTTP→HTTPS por isso — usuários acessam direto a URL com :8443.
 #
 # Pré-requisitos no servidor:
 #   - Cert SSL em ./docker/certs/agileboard.crt + agileboard.key
@@ -30,10 +29,10 @@ services:
     container_name: agile-board-nginx
     restart: unless-stopped
     ports:
-      # Se 443/80 estiverem ocupadas, troque pra "8443:443" e "8001:80"
-      # e ajuste APP_URL no .env pra incluir a porta.
-      - "443:443"
-      - "80:80"
+      # 8443 externa → 443 interna do nginx (SSL termination).
+      # Se quiser usar 443 padrão (URL sem porta), troque pra "443:443"
+      # mas só se o outro Laravel não estiver ocupando.
+      - "8443:443"
     volumes:
       - ./docker/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
       - ./docker/certs:/etc/nginx/certs:ro
