@@ -48,7 +48,10 @@ services:
   # SEM portas expostas — fica acessível só pra nginx pela rede interna.
   # ---------------------------------------------------------------------------
   app:
-    build:
+    # &app_build é um YAML anchor: reverb e queue reusam o mesmo build via
+    # *app_build. Compose só builda 1 vez (cache do Docker cuida dos repeats)
+    # e os 3 containers compartilham a imagem.
+    build: &app_build
       context: .
       args:
         # Vite resolve essas vars em build-time e as embute no JS final.
@@ -79,6 +82,7 @@ services:
   # Servidor Reverb (WebSocket). Nginx faz proxy de /app|/apps pra cá.
   # ---------------------------------------------------------------------------
   reverb:
+    build: *app_build
     image: agile-board-app:latest
     container_name: agile-board-reverb
     restart: unless-stopped
@@ -98,6 +102,7 @@ services:
   # Worker de fila (broadcast events, jobs)
   # ---------------------------------------------------------------------------
   queue:
+    build: *app_build
     image: agile-board-app:latest
     container_name: agile-board-queue
     restart: unless-stopped
