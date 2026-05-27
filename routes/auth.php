@@ -12,10 +12,14 @@ use App\Http\Controllers\Auth\VerifyEmailController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware('guest')->group(function () {
+    // Cadastro público — bloqueado pelo middleware block.register quando o
+    // toggle SystemSetting('registration_enabled') for false (default).
     Route::get('register', [RegisteredUserController::class, 'create'])
+        ->middleware('block.register')
         ->name('register');
 
-    Route::post('register', [RegisteredUserController::class, 'store']);
+    Route::post('register', [RegisteredUserController::class, 'store'])
+        ->middleware('block.register');
 
     Route::get('login', [AuthenticatedSessionController::class, 'create'])
         ->name('login');
@@ -53,6 +57,13 @@ Route::middleware('auth')->group(function () {
     Route::post('confirm-password', [ConfirmablePasswordController::class, 'store']);
 
     Route::put('password', [PasswordController::class, 'update'])->name('password.update');
+
+    // Tela de troca obrigatória — usuário cai aqui via middleware
+    // ForcePasswordChange logo após login se must_change_password=true.
+    Route::get('password/change-required', [\App\Http\Controllers\Auth\ChangePasswordController::class, 'show'])
+        ->name('password.change-required');
+    Route::post('password/change-required', [\App\Http\Controllers\Auth\ChangePasswordController::class, 'update'])
+        ->name('password.change-required.update');
 
     Route::post('logout', [AuthenticatedSessionController::class, 'destroy'])
         ->name('logout');

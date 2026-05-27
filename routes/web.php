@@ -13,6 +13,8 @@ use App\Http\Controllers\Admin\ReportController;
 use App\Http\Controllers\Admin\BotConfigController;
 use App\Http\Controllers\Admin\IcarusController;
 use App\Http\Controllers\Admin\GoogleOAuthController;
+use App\Http\Controllers\Admin\UserController as AdminUserController;
+use App\Http\Controllers\Admin\RegistrationSettingsController;
 use App\Http\Controllers\CommentController;
 use App\Http\Controllers\ItemBlockController;
 use Illuminate\Support\Facades\Route;
@@ -22,7 +24,9 @@ use Inertia\Inertia;
 Route::get('/', function () {
     return Inertia::render('Welcome', [
         'canLogin' => Route::has('login'),
-        'canRegister' => Route::has('register'),
+        // canRegister respeita o toggle do admin (SystemSetting). Quando false,
+        // a Welcome esconde os botões "Registrar" / "Começar Agora".
+        'canRegister' => \App\Models\SystemSetting::getBool('registration_enabled', false),
         'laravelVersion' => Application::VERSION,
         'phpVersion' => PHP_VERSION,
     ]);
@@ -71,6 +75,15 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
     Route::get('google/oauth/connect', [GoogleOAuthController::class, 'connect'])->name('google.connect');
     Route::get('google/oauth/callback', [GoogleOAuthController::class, 'callback'])->name('google.callback');
     Route::post('google/oauth/disconnect', [GoogleOAuthController::class, 'disconnect'])->name('google.disconnect');
+
+    // CRUD de usuários + toggle de cadastro público.
+    Route::get('users', [AdminUserController::class, 'index'])->name('users.index');
+    Route::post('users', [AdminUserController::class, 'store'])->name('users.store');
+    Route::put('users/{user}', [AdminUserController::class, 'update'])->name('users.update');
+    Route::delete('users/{user}', [AdminUserController::class, 'destroy'])->name('users.destroy');
+    Route::post('users/{id}/restore', [AdminUserController::class, 'restore'])->name('users.restore');
+    Route::post('users/{user}/reset-password', [AdminUserController::class, 'resetPassword'])->name('users.reset-password');
+    Route::post('settings/registration-toggle', [RegistrationSettingsController::class, 'toggle'])->name('settings.registration-toggle');
 });
 
 require __DIR__.'/auth.php';

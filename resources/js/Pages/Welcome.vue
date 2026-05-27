@@ -1,6 +1,13 @@
 <script setup>
 import { Link } from '@inertiajs/vue3';
 import ThemeToggle from '@/Components/ThemeToggle.vue';
+
+defineProps({
+    canLogin: Boolean,
+    canRegister: Boolean,
+    laravelVersion: String,
+    phpVersion: String,
+});
 </script>
 
 <template>
@@ -26,6 +33,7 @@ import ThemeToggle from '@/Components/ThemeToggle.vue';
                                 Entrar
                             </Link>
                             <Link
+                                v-if="canRegister"
                                 :href="route('register')"
                                 class="btn-primary"
                             >
@@ -61,10 +69,18 @@ import ThemeToggle from '@/Components/ThemeToggle.vue';
                 <!-- CTA Buttons -->
                 <div class="flex flex-col sm:flex-row gap-4 justify-center mb-16 animate-slide-up">
                     <Link
+                        v-if="canRegister"
                         :href="route('register')"
                         class="btn-primary px-8 py-4 text-lg shadow-lg hover:shadow-xl transition"
                     >
                         🚀 Começar Agora
+                    </Link>
+                    <Link
+                        v-else
+                        :href="route('login')"
+                        class="btn-primary px-8 py-4 text-lg shadow-lg hover:shadow-xl transition"
+                    >
+                        🔑 Entrar
                     </Link>
                     <a
                         href="#features"
@@ -136,7 +152,7 @@ import ThemeToggle from '@/Components/ThemeToggle.vue';
         </section>
 
         <!-- CTA Section -->
-        <section class="py-20 sm:py-32 border-t border-border-main">
+        <section v-if="canRegister" class="py-20 sm:py-32 border-t border-border-main">
             <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
                 <h2 class="text-4xl sm:text-5xl font-bold text-text-main mb-6">
                     Pronto para começar?

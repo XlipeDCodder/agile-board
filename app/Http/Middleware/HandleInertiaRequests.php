@@ -44,6 +44,7 @@ class HandleInertiaRequests extends Middleware
                 'success' => fn () => $request->session()->get('success'),
                 'google_success' => fn () => $request->session()->get('google_success'),
                 'google_error' => fn () => $request->session()->get('google_error'),
+                'temp_password' => fn () => $request->session()->get('temp_password'),
             ],
         ]);
     }
