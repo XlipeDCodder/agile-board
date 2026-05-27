@@ -1,0 +1,47 @@
+# Git / metadados
+.git
+.gitignore
+.gitattributes
+.github
+.claude
+
+# Segredos — NUNCA copiar pra dentro da imagem.
+# O .env vai por volume montado em runtime.
+.env
+.env.backup
+.env.production
+*.pem
+*.key
+
+# Deps locais — reinstaladas dentro do build do Docker.
+node_modules
+vendor
+
+# Build artifacts — gerados no próprio build.
+public/build
+public/hot
+public/storage
+
+# Storage volátil — vai por volume nomeado em runtime.
+storage/logs/*
+!storage/logs/.gitkeep
+storage/framework/cache/*
+!storage/framework/cache/.gitkeep
+storage/framework/sessions/*
+!storage/framework/sessions/.gitkeep
+storage/framework/views/*
+!storage/framework/views/.gitkeep
+storage/app/livewire-tmp
+storage/debugbar
+
+# Editor / SO
+.idea
+.vscode
+*.swp
+*.log
+Thumbs.db
+.DS_Store
+
+# Testes / docs locais
+tests/coverage
+*.md.bak

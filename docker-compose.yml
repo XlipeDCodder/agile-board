@@ -1,0 +1,139 @@
+# =============================================================================
+# Stack do agile-board (sistema interno B-Agile).
+#
+# Portas externas customizadas pra coexistir com outro Laravel já rodando
+# no mesmo host:
+#   - Laravel:  8001  (interno 8000)
+#   - Reverb:   8081  (interno 8080)
+#   - Postgres: 5433  (interno 5432)
+#   - Redis:    6380  (interno 6379)
+#
+# Pra usar:
+#   1. Copie .env.example pra .env e ajuste (ver README/instruções de deploy)
+#   2. docker compose up -d --build
+#   3. docker compose exec app php artisan migrate --force
+# =============================================================================
+
+services:
+  # ---------------------------------------------------------------------------
+  # Aplicação Laravel (HTTP via php artisan serve com 4 workers)
+  # ---------------------------------------------------------------------------
+  app:
+    build:
+      context: .
+      args:
+        # Vite resolve essas vars em build-time e as embute no JS final.
+        # Pra mudar o host/porta que o NAVEGADOR usa pra falar com o Reverb,
+        # precisa rebuildar (docker compose build app).
+        VITE_REVERB_APP_KEY: ${REVERB_APP_KEY}
+        VITE_REVERB_HOST: ${VITE_REVERB_HOST}
+        VITE_REVERB_PORT: ${VITE_REVERB_PORT}
+        VITE_REVERB_SCHEME: ${VITE_REVERB_SCHEME:-http}
+    image: agile-board-app:latest
+    container_name: agile-board-app
+    restart: unless-stopped
+    ports:
+      - "8001:8000"
+    env_file:
+      - .env
+    depends_on:
+      - postgres
+      - redis
+    volumes:
+      # .env como volume pra trocas rápidas (sem rebuild) — exceto vars
+      # VITE_* que precisam de rebuild.
+      - ./.env:/var/www/html/.env:ro
+      # storage persistente: uploads de anexos, logs, sessões.
+      - agile-board-storage:/var/www/html/storage
+    networks:
+      - agile-board
+
+  # ---------------------------------------------------------------------------
+  # Servidor Reverb (WebSocket)
+  # ---------------------------------------------------------------------------
+  reverb:
+    image: agile-board-app:latest
+    container_name: agile-board-reverb
+    restart: unless-stopped
+    command: ["php", "artisan", "reverb:start", "--host=0.0.0.0", "--port=8080"]
+    ports:
+      - "8081:8080"
+    env_file:
+      - .env
+    depends_on:
+      - app
+      - redis
+    volumes:
+      - ./.env:/var/www/html/.env:ro
+      - agile-board-storage:/var/www/html/storage
+    networks:
+      - agile-board
+
+  # ---------------------------------------------------------------------------
+  # Worker de fila (broadcast events, jobs)
+  # ---------------------------------------------------------------------------
+  queue:
+    image: agile-board-app:latest
+    container_name: agile-board-queue
+    restart: unless-stopped
+    command: ["php", "artisan", "queue:work", "--tries=3", "--max-time=3600", "--sleep=3"]
+    env_file:
+      - .env
+    depends_on:
+      - app
+      - redis
+      - postgres
+    volumes:
+      - ./.env:/var/www/html/.env:ro
+      - agile-board-storage:/var/www/html/storage
+    networks:
+      - agile-board
+
+  # ---------------------------------------------------------------------------
+  # PostgreSQL
+  # ---------------------------------------------------------------------------
+  postgres:
+    image: postgres:16-alpine
+    container_name: agile-board-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DB_DATABASE}
+      POSTGRES_USER: ${DB_USERNAME}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    ports:
+      - "5433:5432"
+    volumes:
+      - agile-board-pgdata:/var/lib/postgresql/data
+    networks:
+      - agile-board
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME} -d ${DB_DATABASE}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ---------------------------------------------------------------------------
+  # Redis (cache + queue + session)
+  # ---------------------------------------------------------------------------
+  redis:
+    image: redis:7-alpine
+    container_name: agile-board-redis
+    restart: unless-stopped
+    ports:
+      - "6380:6379"
+    volumes:
+      - agile-board-redis:/data
+    networks:
+      - agile-board
+
+volumes:
+  agile-board-pgdata:
+  agile-board-redis:
+  agile-board-storage:
+
+# Rede isolada pra esse stack — não interfere com o outro Laravel
+# que já roda no mesmo host.
+networks:
+  agile-board:
+    name: agile-board-net
+    driver: bridge
