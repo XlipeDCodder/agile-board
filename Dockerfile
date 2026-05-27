@@ -1,11 +1,27 @@
 # syntax=docker/dockerfile:1.6
 
 # =============================================================================
-# Stage 1: build do frontend com Node + Vite
+# Stage 1: composer install (gera vendor/ sem rodar scripts nem autoload).
+# Separado pra ser cacheado quando composer.json/lock não mudam.
 # =============================================================================
-# Os VITE_REVERB_* SÃO RESOLVIDOS EM BUILD-TIME (Vite injeta esses valores
-# no bundle final). Pra trocar o IP/porta do Reverb visto pelo navegador,
-# precisa rebuildar a imagem. Por isso os args.
+FROM composer:2 AS composer-deps
+
+WORKDIR /app
+COPY composer.json composer.lock ./
+# --no-scripts: não roda artisan que tenta acessar .env / app/ que ainda não existem
+# --no-autoloader: deixa o dump pra depois, quando app/ estiver presente
+RUN composer install \
+        --no-dev \
+        --no-scripts \
+        --no-autoloader \
+        --prefer-dist \
+        --no-interaction \
+        --no-progress
+
+# =============================================================================
+# Stage 2: build do frontend com Node + Vite.
+# Precisa do vendor (Ziggy é PHP-vendored mas importado pelo JS via Vite).
+# =============================================================================
 FROM node:20-alpine AS frontend
 
 ARG VITE_REVERB_APP_KEY
@@ -27,19 +43,22 @@ COPY public ./public
 COPY vite.config.js tailwind.config.js postcss.config.js ./
 COPY jsconfig.json* ./
 COPY routes ./routes
+# Ziggy é PHP vendored mas é importado pelo app.js via '../../vendor/tightenco/ziggy'.
+# Sem essa cópia, npm run build falha com "Could not resolve ../../vendor/...".
+COPY --from=composer-deps /app/vendor ./vendor
 
 RUN npm run build
 
 # =============================================================================
-# Stage 2: runtime PHP 8.3 CLI (php artisan serve + reverb + queue)
+# Stage 3: runtime PHP 8.3 CLI Alpine (php artisan serve / reverb / queue)
 # =============================================================================
 FROM php:8.3-cli-alpine AS runtime
 
-# Extensões PHP necessárias:
-# - pdo_pgsql: conexão com Postgres
+# Extensões PHP:
+# - pdo_pgsql: Postgres
 # - redis (PECL): cache/queue/session
-# - gd, exif: thumbnails/imagens em uploads
-# - zip, mbstring, bcmath, pcntl: padrão Laravel
+# - gd, exif: imagens
+# - zip, mbstring, bcmath, pcntl, intl: padrão Laravel
 RUN apk add --no-cache \
         bash git curl tini \
         libpng-dev libjpeg-turbo-dev freetype-dev \
@@ -56,26 +75,28 @@ COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
 WORKDIR /var/www/html
 
-# Copia código fonte (respeitando .dockerignore)
+# 1) Código fonte (sem vendor — bloqueado pelo .dockerignore)
 COPY . .
-# Traz o build do front gerado no stage anterior
+
+# 2) Vendor já instalado pelo stage composer-deps
+COPY --from=composer-deps /app/vendor ./vendor
+
+# 3) Build do Vite gerado pelo stage frontend
 COPY --from=frontend /app/public/build ./public/build
 
-# Composer em modo produção: sem dev deps, autoload otimizado
-RUN composer install --no-dev --optimize-autoloader --no-interaction --no-progress \
+# 4) Regenera o autoload otimizado agora que app/ está disponível.
+#    Esse é o passo que o --no-autoloader do stage 1 deixou pendente.
+RUN composer dump-autoload --optimize --no-dev --no-interaction \
     && composer clear-cache
 
-# Storage precisa ser gravável pelo PHP. Usamos UID/GID 1000 (default
-# em distribuições desktop) pra alinhar com volumes mapeados do host.
+# Storage gravável (UID 1000 alinhado com volumes do host).
 RUN chown -R 1000:1000 storage bootstrap/cache \
     && chmod -R 775 storage bootstrap/cache
 
 EXPOSE 8000 8080
 
-# tini garante que SIGTERM é encaminhado corretamente pros processos PHP,
-# permitindo shutdown limpo no docker-compose down.
+# tini encaminha SIGTERM corretamente — shutdown limpo no docker compose down.
 ENTRYPOINT ["/sbin/tini", "--"]
 
-# Default: roda o servidor HTTP. O docker-compose sobrescreve esse CMD
-# pros containers de reverb e queue worker.
+# Default: HTTP server. Compose sobrescreve pros containers reverb e queue.
 CMD ["php", "artisan", "serve", "--host=0.0.0.0", "--port=8000", "--workers=4"]
