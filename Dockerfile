@@ -101,4 +101,6 @@ EXPOSE 8000 8080
 ENTRYPOINT ["/sbin/tini", "--"]
 
 # Default: HTTP server. Compose sobrescreve pros containers reverb e queue.
-CMD ["php", "artisan", "serve", "--host=0.0.0.0", "--port=8000", "--workers=4"]
+# O número de workers do php built-in server é controlado pela env
+# PHP_CLI_SERVER_WORKERS=4 (definida no .env e passada via env_file).
+CMD ["php", "artisan", "serve", "--host=0.0.0.0", "--port=8000"]
