@@ -28,6 +28,7 @@ const navItems = [
     { icon: '✅', label: 'Concluídos', route: 'completed.index', icon_svg: 'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z' },
     { icon: '📁', label: 'Projetos', route: 'projects.index', icon_svg: 'M5 13l4 4L19 7' },
     { icon: '⏱️', label: 'Apontamento', route: 'time-entries.index', icon_svg: 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z' },
+    { icon: '🚀', label: 'Deploys', route: 'deploys.index', icon_svg: 'M5 10l7-7m0 0l7 7m-7-7v18' },
 ];
 
 const adminItems = [

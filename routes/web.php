@@ -17,6 +17,8 @@ use App\Http\Controllers\Admin\UserController as AdminUserController;
 use App\Http\Controllers\Admin\RegistrationSettingsController;
 use App\Http\Controllers\CommentController;
 use App\Http\Controllers\ItemBlockController;
+use App\Http\Controllers\DeploymentController;
+use App\Http\Controllers\NotificationController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\DashboardController;
 use Inertia\Inertia;
@@ -60,6 +62,18 @@ Route::middleware('auth')->group(function () {
     Route::post('/items/{item}/unblock', [ItemBlockController::class, 'unblock'])->name('items.unblock');
     Route::resource('projects', \App\Http\Controllers\ProjectController::class)->only(['index', 'store', 'update', 'destroy']);
     Route::resource('time-entries', \App\Http\Controllers\TimeEntryController::class)->only(['index', 'store', 'update', 'destroy']);
+
+    // Deploys (homologação + produção) + aprovações.
+    Route::get('/deploys', [DeploymentController::class, 'index'])->name('deploys.index');
+    Route::post('/deploys', [DeploymentController::class, 'store'])->name('deploys.store');
+    Route::post('/deploys/{deployment}/approve', [DeploymentController::class, 'approve'])->name('deploys.approve');
+    Route::post('/deploys/{deployment}/reject', [DeploymentController::class, 'reject'])->name('deploys.reject');
+
+    // Notificações (página + sino + ações).
+    Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications.index');
+    Route::get('/notifications/dropdown', [NotificationController::class, 'dropdown'])->name('notifications.dropdown');
+    Route::post('/notifications/{id}/read', [NotificationController::class, 'markAsRead'])->name('notifications.read');
+    Route::post('/notifications/read-all', [NotificationController::class, 'markAllAsRead'])->name('notifications.read-all');
 });
 
 Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(function () {

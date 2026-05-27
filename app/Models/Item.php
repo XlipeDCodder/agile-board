@@ -140,4 +140,9 @@ class Item extends Model
     {
         return $this->hasMany(TimeEntry::class);
     }
+
+    public function deployments(): HasMany
+    {
+        return $this->hasMany(Deployment::class);
+    }
 }

@@ -31,7 +31,7 @@ class HandleInertiaRequests extends Middleware
     {
         return array_merge(parent::share($request), [
             'auth' => [
-                
+
                 'user' => $request->user() ? [
                     'id' => $request->user()->id,
                     'name' => $request->user()->name,
@@ -39,13 +39,19 @@ class HandleInertiaRequests extends Middleware
                     'is_admin' => $request->user()->is_admin, // AQUI ESTÁ A ADIÇÃO
                 ] : null,
             ],
-            
+
             'flash' => [
                 'success' => fn () => $request->session()->get('success'),
                 'google_success' => fn () => $request->session()->get('google_success'),
                 'google_error' => fn () => $request->session()->get('google_error'),
                 'temp_password' => fn () => $request->session()->get('temp_password'),
             ],
+
+            // Contagem de notificações não-lidas pro sino no header.
+            // Lazy (closure) pra não consultar DB em requests anônimos.
+            'notifications_unread_count' => fn () => $request->user()
+                ? $request->user()->unreadNotifications()->count()
+                : 0,
         ]);
     }
 }

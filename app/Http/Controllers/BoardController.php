@@ -27,13 +27,17 @@ class BoardController extends Controller
                 $query->whereNull('parent_id')->with(['assignees', 'subtasks', 'comments.user', 'comments.attachments', 'project']);
             }]);
         
-        // Carrega os itens para a coluna "Feito" com o filtro de tempo
+        // Carrega os itens para a coluna "Feito" com o filtro de tempo.
+        // Também eager-loads deployments pra mostrar/esconder botões de
+        // "Solicitar deploy" no modal do card.
         if ($doneColumn) {
             $doneColumn->load(['items' => function ($query) {
                 $query->whereNull('parent_id')
-                      ->where('items.updated_at', '>=', now()->subMinutes(30)) 
-                      // E AQUI TAMBÉM
-                      ->with(['assignees', 'subtasks', 'comments.user', 'comments.attachments', 'project']);
+                      ->where('items.updated_at', '>=', now()->subMinutes(30))
+                      ->with([
+                          'assignees', 'subtasks', 'comments.user', 'comments.attachments', 'project',
+                          'deployments' => fn ($q) => $q->orderByDesc('created_at'),
+                      ]);
             }]);
         }
 

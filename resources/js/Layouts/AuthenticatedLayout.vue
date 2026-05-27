@@ -3,6 +3,7 @@ import { ref, onMounted } from 'vue';
 import Sidebar from '@/Components/Sidebar.vue';
 import Dropdown from '@/Components/Dropdown.vue';
 import DropdownLink from '@/Components/DropdownLink.vue';
+import NotificationBell from '@/Components/NotificationBell.vue';
 import { Link, usePage } from '@inertiajs/vue3';
 
 const notificationMessage = ref(null);
@@ -61,7 +62,8 @@ onMounted(() => {
                     </div>
 
                     <!-- User Menu (Desktop) -->
-                    <div class="hidden sm:flex items-center">
+                    <div class="hidden sm:flex items-center gap-3">
+                        <NotificationBell />
                         <Dropdown align="right" width="48">
                             <template #trigger>
                                 <button

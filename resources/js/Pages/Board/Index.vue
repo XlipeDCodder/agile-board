@@ -70,6 +70,51 @@ const columnsExceptDone = computed(() =>
 
 const isInFeito = computed(() => currentItem.value?.column?.name === 'Feito');
 
+// Cards em Feito ganham botões de deploy. Esconde se já tem production
+// deploy ativo (regra acordada — evita deploys duplicados sem querer).
+const itemDeployments = computed(() => currentItem.value?.deployments || []);
+const hasProductionDeploy = computed(() =>
+    itemDeployments.value.some(d => d.environment === 'production' && d.status === 'completed')
+);
+const canRequestDeploy = computed(() => isInFeito.value && !hasProductionDeploy.value);
+
+const deployForm = useForm({
+    item_id: null,
+    environment: 'staging',
+    notes: '',
+    is_urgent: false,
+});
+const showDeployModal = ref(false);
+const deployModalMode = ref('staging'); // 'staging' ou 'urgent'
+
+const openDeployModal = (mode) => {
+    if (!currentItem.value) return;
+    deployForm.reset();
+    deployForm.clearErrors();
+    deployForm.item_id = currentItem.value.id;
+    deployModalMode.value = mode;
+    if (mode === 'staging') {
+        deployForm.environment = 'staging';
+        deployForm.is_urgent = false;
+    } else {
+        deployForm.environment = 'production';
+        deployForm.is_urgent = true;
+    }
+    showDeployModal.value = true;
+};
+
+const submitDeploy = () => {
+    deployForm.post(route('deploys.store'), {
+        preserveScroll: true,
+        onSuccess: () => {
+            showDeployModal.value = false;
+            // Atualiza estado do card no modal (mas como o board é Inertia,
+            // não recarrega tudo — o usuário pode fechar e reabrir o card
+            // pra ver o estado fresh).
+        },
+    });
+};
+
 const openReopenFromBoard = () => {
     if (!currentItem.value) return;
     const original = currentItem.value;
@@ -490,6 +535,24 @@ const matchesFilter = (item) => {
                         <span v-if="itemForm.type === 'reabertura'" class="text-base font-medium text-orange-500 ml-2">🔄 Reabertura</span>
                     </h2>
                     <div v-if="itemForm.id" class="flex items-center gap-2 flex-wrap justify-end">
+                        <button v-if="canRequestDeploy"
+                            type="button"
+                            @click="openDeployModal('staging')"
+                            class="px-3 py-1.5 rounded-lg text-sm font-medium bg-amber-500/10 text-amber-600 border border-amber-500/30 hover:bg-amber-500/20 transition">
+                            🚀 Solicitar deploy em homologação
+                        </button>
+                        <button v-if="canRequestDeploy"
+                            type="button"
+                            @click="openDeployModal('urgent')"
+                            class="px-3 py-1.5 rounded-lg text-sm font-medium bg-trello-red/10 text-trello-red border border-trello-red/30 hover:bg-trello-red/20 transition">
+                            ⚠️ Deploy urgente em produção
+                        </button>
+                        <button v-if="isInFeito && hasProductionDeploy"
+                            type="button"
+                            disabled
+                            class="px-3 py-1.5 rounded-lg text-sm font-medium bg-emerald-500/10 text-emerald-600 border border-emerald-500/30 cursor-not-allowed">
+                            ✅ Já em produção
+                        </button>
                         <button v-if="isInFeito"
                             type="button"
                             @click="openReopenFromBoard"
@@ -801,6 +864,42 @@ const matchesFilter = (item) => {
                     <svg class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M6 18L18 6M6 6l12 12" /></svg>
                 </button>
             </div>
+        </Modal>
+
+        <!-- Sub-modal: solicitar deploy (staging ou urgente em produção) -->
+        <Modal :show="showDeployModal" @close="showDeployModal = false" max-width="lg">
+            <form @submit.prevent="submitDeploy" class="p-6 bg-surface-variant space-y-4">
+                <h3 class="text-lg font-bold text-text-main">
+                    <span v-if="deployModalMode === 'staging'">🚀 Solicitar deploy em homologação</span>
+                    <span v-else class="text-trello-red">⚠️ Deploy urgente em produção</span>
+                </h3>
+                <p v-if="deployModalMode === 'urgent'" class="text-sm text-trello-red bg-trello-red/10 border border-trello-red/30 rounded-lg p-3">
+                    <strong>Atenção:</strong> esse deploy <strong>pula a etapa de homologação</strong>. Use só em casos de hotfix ou emergência. Os admins serão notificados.
+                </p>
+                <p v-else class="text-sm text-text-muted">
+                    Todos os admins serão notificados pra aprovar ou rejeitar. Você não será notificado do próprio deploy.
+                </p>
+
+                <div>
+                    <label class="block text-sm font-bold text-text-main mb-1">Notas (opcional)</label>
+                    <textarea v-model="deployForm.notes"
+                              rows="4"
+                              class="input-field w-full"
+                              maxlength="2000"
+                              placeholder="Release notes, versão, link da pipeline, observações…"></textarea>
+                </div>
+
+                <div class="flex justify-end gap-3 pt-2 border-t border-border-main">
+                    <button type="button" @click="showDeployModal = false" class="btn-secondary">Cancelar</button>
+                    <button type="submit" :disabled="deployForm.processing"
+                            :class="[
+                                'px-4 py-2 rounded-lg font-bold text-white disabled:opacity-50',
+                                deployModalMode === 'urgent' ? 'bg-trello-red' : 'bg-amber-500'
+                            ]">
+                        {{ deployForm.processing ? 'Enviando…' : (deployModalMode === 'urgent' ? 'Confirmar deploy urgente' : 'Solicitar') }}
+                    </button>
+                </div>
+            </form>
         </Modal>
     </AuthenticatedLayout>
 </template>
