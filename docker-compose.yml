@@ -69,9 +69,11 @@ services:
       - postgres
       - redis
     volumes:
-      # .env como volume pra trocas rápidas (sem rebuild) — exceto vars
-      # VITE_* que precisam de rebuild.
-      - ./.env:/var/www/html/.env:ro
+      # .env como volume read-WRITE pra que comandos como artisan key:generate
+      # e migrate possam escrever quando precisarem. O servidor é privado
+      # (apenas admins têm acesso shell), então o risco do app modificar o
+      # próprio config é aceitável.
+      - ./.env:/var/www/html/.env
       # storage persistente: uploads de anexos, logs, sessões.
       - agile-board-storage:/var/www/html/storage
     networks:
@@ -92,7 +94,7 @@ services:
       - app
       - redis
     volumes:
-      - ./.env:/var/www/html/.env:ro
+      - ./.env:/var/www/html/.env
       - agile-board-storage:/var/www/html/storage
     networks:
       - agile-board
@@ -113,7 +115,7 @@ services:
       - redis
       - postgres
     volumes:
-      - ./.env:/var/www/html/.env:ro
+      - ./.env:/var/www/html/.env
       - agile-board-storage:/var/www/html/storage
     networks:
       - agile-board
