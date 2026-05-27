@@ -23,6 +23,19 @@ return Application::configure(basePath: dirname(__DIR__))
             'admin' => \App\Http\Middleware\EnsureUserIsAdmin::class,
             'block.register' => \App\Http\Middleware\BlockPublicRegistration::class,
         ]);
+
+        // Quando o app roda atrás do nginx (deploy via docker-compose), o
+        // php artisan serve recebe HTTP interno mas o usuário acessa HTTPS:8443.
+        // Sem isso, Laravel gera URLs http:// pros assets do Vite e o navegador
+        // bloqueia com "mixed content". O '*' confia em qualquer proxy upstream
+        // — seguro porque o app só escuta na rede interna do docker.
+        $middleware->trustProxies(at: '*', headers:
+            \Illuminate\Http\Request::HEADER_X_FORWARDED_FOR |
+            \Illuminate\Http\Request::HEADER_X_FORWARDED_HOST |
+            \Illuminate\Http\Request::HEADER_X_FORWARDED_PORT |
+            \Illuminate\Http\Request::HEADER_X_FORWARDED_PROTO |
+            \Illuminate\Http\Request::HEADER_X_FORWARDED_AWS_ELB,
+        );
     })
     ->withProviders([
         AuthServiceProvider::class,
