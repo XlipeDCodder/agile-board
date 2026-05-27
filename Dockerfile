@@ -50,9 +50,11 @@ COPY --from=composer-deps /app/vendor ./vendor
 RUN npm run build
 
 # =============================================================================
-# Stage 3: runtime PHP 8.3 CLI Alpine (php artisan serve / reverb / queue)
+# Stage 3: runtime PHP 8.4 CLI Alpine (php artisan serve / reverb / queue).
+# 8.4 alinha com a versão usada pra gerar o composer.lock — sem isso,
+# composer dump-autoload falha com "Composer dependencies require PHP >= 8.4.0".
 # =============================================================================
-FROM php:8.3-cli-alpine AS runtime
+FROM php:8.4-cli-alpine AS runtime
 
 # Extensões PHP:
 # - pdo_pgsql: Postgres
