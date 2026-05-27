@@ -12,6 +12,9 @@
 .env.production
 *.pem
 *.key
+*.crt
+docker/certs/*
+!docker/certs/.gitkeep
 
 # Deps locais — reinstaladas dentro do build do Docker.
 node_modules

@@ -1,0 +1,3 @@
+# Diretório onde os certificados SSL ficam no servidor.
+# Os arquivos .crt e .key reais NUNCA vão pro git (ver .gitignore).
+# São gerados localmente via mkcert e copiados pra cá no deploy.

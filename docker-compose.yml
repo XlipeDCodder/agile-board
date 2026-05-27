@@ -1,22 +1,51 @@
 # =============================================================================
 # Stack do agile-board (sistema interno B-Agile).
 #
-# Portas externas customizadas pra coexistir com outro Laravel já rodando
-# no mesmo host:
-#   - Laravel:  8001  (interno 8000)
-#   - Reverb:   8081  (interno 8080)
+# Topologia: nginx termina SSL na 443 e faz reverse proxy pros containers
+# internos (app:8000 e reverb:8080). Postgres e Redis expostos em portas
+# alternativas pra coexistir com outro Laravel já no host.
+#
+# Portas externas:
+#   - HTTPS:    443   (nginx — proxy pra app/reverb)
+#   - HTTP:     80    (nginx — redirect 301 pra HTTPS)
 #   - Postgres: 5433  (interno 5432)
 #   - Redis:    6380  (interno 6379)
 #
-# Pra usar:
-#   1. Copie .env.example pra .env e ajuste (ver README/instruções de deploy)
-#   2. docker compose up -d --build
-#   3. docker compose exec app php artisan migrate --force
+# Se 443/80 já estiverem ocupadas pelo outro stack, troque pra 8443:443
+# e 8001:80 abaixo no serviço nginx — vai mudar a URL pra
+# https://agileboard.salvador.ba.gov.br:8443
+#
+# Pré-requisitos no servidor:
+#   - Cert SSL em ./docker/certs/agileboard.crt + agileboard.key
+#     (gerado via mkcert na máquina dev — ver docs)
+#   - .env configurado (ver instruções de deploy)
 # =============================================================================
 
 services:
   # ---------------------------------------------------------------------------
-  # Aplicação Laravel (HTTP via php artisan serve com 4 workers)
+  # Nginx — termina SSL e faz reverse proxy pros containers internos.
+  # ---------------------------------------------------------------------------
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: agile-board-nginx
+    restart: unless-stopped
+    ports:
+      # Se 443/80 estiverem ocupadas, troque pra "8443:443" e "8001:80"
+      # e ajuste APP_URL no .env pra incluir a porta.
+      - "443:443"
+      - "80:80"
+    volumes:
+      - ./docker/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./docker/certs:/etc/nginx/certs:ro
+    depends_on:
+      - app
+      - reverb
+    networks:
+      - agile-board
+
+  # ---------------------------------------------------------------------------
+  # Aplicação Laravel (HTTP via php artisan serve com 4 workers).
+  # SEM portas expostas — fica acessível só pra nginx pela rede interna.
   # ---------------------------------------------------------------------------
   app:
     build:
@@ -28,12 +57,10 @@ services:
         VITE_REVERB_APP_KEY: ${REVERB_APP_KEY}
         VITE_REVERB_HOST: ${VITE_REVERB_HOST}
         VITE_REVERB_PORT: ${VITE_REVERB_PORT}
-        VITE_REVERB_SCHEME: ${VITE_REVERB_SCHEME:-http}
+        VITE_REVERB_SCHEME: ${VITE_REVERB_SCHEME:-https}
     image: agile-board-app:latest
     container_name: agile-board-app
     restart: unless-stopped
-    ports:
-      - "8001:8000"
     env_file:
       - .env
     depends_on:
@@ -49,15 +76,13 @@ services:
       - agile-board
 
   # ---------------------------------------------------------------------------
-  # Servidor Reverb (WebSocket)
+  # Servidor Reverb (WebSocket). Nginx faz proxy de /app|/apps pra cá.
   # ---------------------------------------------------------------------------
   reverb:
     image: agile-board-app:latest
     container_name: agile-board-reverb
     restart: unless-stopped
     command: ["php", "artisan", "reverb:start", "--host=0.0.0.0", "--port=8080"]
-    ports:
-      - "8081:8080"
     env_file:
       - .env
     depends_on:
