@@ -2,7 +2,7 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import Modal from '@/Components/Modal.vue';
 import { Head, useForm, router, usePage } from '@inertiajs/vue3';
-import { ref, computed } from 'vue';
+import { ref, computed, onMounted, onUnmounted } from 'vue';
 
 const props = defineProps({
     deployments: Array,
@@ -98,6 +98,31 @@ const formatDate = (iso) => {
     try { return new Date(iso).toLocaleString('pt-BR'); }
     catch (e) { return ''; }
 };
+
+// Real-time: outros usuários aprovando/rejeitando/promovendo deploys
+// atualizam a página automaticamente. Reusa o evento .item.updated
+// (já disparado pelo DeploymentController em todas as ações).
+// Debounce de 500ms pra não recarregar 5x se houver burst de eventos.
+let reloadTimer = null;
+const debouncedReload = () => {
+    clearTimeout(reloadTimer);
+    reloadTimer = setTimeout(() => {
+        router.reload({ only: ['deployments'], preserveScroll: true, preserveState: true });
+    }, 500);
+};
+
+onMounted(() => {
+    if (window.Echo) {
+        window.Echo.channel('board').listen('.item.updated', debouncedReload);
+    }
+});
+
+onUnmounted(() => {
+    if (window.Echo) {
+        try { window.Echo.leave('board'); } catch (e) { /* ignore */ }
+    }
+    clearTimeout(reloadTimer);
+});
 </script>
 
 <template>
@@ -117,7 +142,7 @@ const formatDate = (iso) => {
                 <!-- Pendente aprovação -->
                 <div class="bg-surface-variant border border-border-main rounded-2xl p-4 shadow-sm">
                     <h3 class="font-bold text-text-main mb-3 flex items-center gap-2">
-                        <span>🟡 Aguardando aprovação</span>
+                        <span>🟡 Em HML aguardando aprovação</span>
                         <span class="text-xs bg-amber-500/20 text-amber-600 px-2 py-0.5 rounded-full">{{ pendingStaging.length }}</span>
                     </h3>
                     <div class="space-y-3">

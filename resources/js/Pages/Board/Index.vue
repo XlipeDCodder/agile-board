@@ -70,13 +70,40 @@ const columnsExceptDone = computed(() =>
 
 const isInFeito = computed(() => currentItem.value?.column?.name === 'Feito');
 
-// Cards em Feito ganham botões de deploy. Esconde se já tem production
-// deploy ativo (regra acordada — evita deploys duplicados sem querer).
+// Estado de deploy do card aberto. Calculado a partir do array de
+// deployments eager-loaded pelo BoardController. Real-time via Echo
+// .item.updated atualiza currentItem.value automaticamente.
 const itemDeployments = computed(() => currentItem.value?.deployments || []);
-const hasProductionDeploy = computed(() =>
-    itemDeployments.value.some(d => d.environment === 'production' && d.status === 'completed')
+
+const latestProductionDeploy = computed(() =>
+    itemDeployments.value
+        .filter(d => d.environment === 'production' && d.status === 'completed')
+        .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))[0] || null
 );
-const canRequestDeploy = computed(() => isInFeito.value && !hasProductionDeploy.value);
+const latestStagingDeploy = computed(() =>
+    itemDeployments.value
+        .filter(d => d.environment === 'staging')
+        .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))[0] || null
+);
+
+const hasProductionDeploy = computed(() => !!latestProductionDeploy.value);
+const hasPendingStaging = computed(() =>
+    latestStagingDeploy.value?.status === 'pending'
+);
+const hasApprovedStaging = computed(() =>
+    latestStagingDeploy.value?.status === 'approved' && !hasProductionDeploy.value
+);
+
+// Regras dos botões:
+// - "Deploy em homologação": só se não tem prod ativo nem staging pendente/aprovado
+// - "Deploy urgente em produção": só se não tem prod ativo (mesmo se tem staging
+//   pendente — caso o gestor decida pular o processo por hotfix)
+const canRequestStaging = computed(() =>
+    isInFeito.value && !hasProductionDeploy.value && !hasPendingStaging.value && !hasApprovedStaging.value
+);
+const canRequestUrgent = computed(() =>
+    isInFeito.value && !hasProductionDeploy.value
+);
 
 const deployForm = useForm({
     item_id: null,
@@ -106,11 +133,13 @@ const openDeployModal = (mode) => {
 const submitDeploy = () => {
     deployForm.post(route('deploys.store'), {
         preserveScroll: true,
+        // preserveState: true garante que o modal principal NÃO fecha
+        // após o reload de props. O watch reativo (linha ~201) detecta
+        // a mudança em props.columns (que vem com .deployments fresh)
+        // e atualiza currentItem.value — botões somem e badge aparece.
+        preserveState: true,
         onSuccess: () => {
             showDeployModal.value = false;
-            // Atualiza estado do card no modal (mas como o board é Inertia,
-            // não recarrega tudo — o usuário pode fechar e reabrir o card
-            // pra ver o estado fresh).
         },
     });
 };
@@ -535,24 +564,32 @@ const matchesFilter = (item) => {
                         <span v-if="itemForm.type === 'reabertura'" class="text-base font-medium text-orange-500 ml-2">🔄 Reabertura</span>
                     </h2>
                     <div v-if="itemForm.id" class="flex items-center gap-2 flex-wrap justify-end">
-                        <button v-if="canRequestDeploy"
+                        <!-- Botões de deploy só pra cards em Feito -->
+                        <button v-if="canRequestStaging"
                             type="button"
                             @click="openDeployModal('staging')"
                             class="px-3 py-1.5 rounded-lg text-sm font-medium bg-amber-500/10 text-amber-600 border border-amber-500/30 hover:bg-amber-500/20 transition">
-                            🚀 Solicitar deploy em homologação
+                            🚀 Deploy em homologação
                         </button>
-                        <button v-if="canRequestDeploy"
+                        <button v-if="canRequestUrgent"
                             type="button"
                             @click="openDeployModal('urgent')"
                             class="px-3 py-1.5 rounded-lg text-sm font-medium bg-trello-red/10 text-trello-red border border-trello-red/30 hover:bg-trello-red/20 transition">
                             ⚠️ Deploy urgente em produção
                         </button>
-                        <button v-if="isInFeito && hasProductionDeploy"
-                            type="button"
-                            disabled
-                            class="px-3 py-1.5 rounded-lg text-sm font-medium bg-emerald-500/10 text-emerald-600 border border-emerald-500/30 cursor-not-allowed">
-                            ✅ Já em produção
-                        </button>
+                        <!-- Badges informativos quando já há deploy em andamento -->
+                        <span v-if="isInFeito && hasProductionDeploy"
+                            class="px-3 py-1.5 rounded-lg text-sm font-medium bg-emerald-500/10 text-emerald-600 border border-emerald-500/30">
+                            ✅ Em produção
+                        </span>
+                        <span v-else-if="isInFeito && hasApprovedStaging"
+                            class="px-3 py-1.5 rounded-lg text-sm font-medium bg-brand/10 text-brand border border-brand/30">
+                            🟢 Aprovado — aguardando produção
+                        </span>
+                        <span v-else-if="isInFeito && hasPendingStaging"
+                            class="px-3 py-1.5 rounded-lg text-sm font-medium bg-amber-500/10 text-amber-600 border border-amber-500/30">
+                            🟡 Em HML aguardando aprovação
+                        </span>
                         <button v-if="isInFeito"
                             type="button"
                             @click="openReopenFromBoard"
