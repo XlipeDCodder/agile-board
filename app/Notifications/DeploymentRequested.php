@@ -4,6 +4,7 @@ namespace App\Notifications;
 
 use App\Models\Deployment;
 use Illuminate\Bus\Queueable;
+use Illuminate\Notifications\Messages\BroadcastMessage;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
@@ -19,7 +20,15 @@ class DeploymentRequested extends Notification
 
     public function via(object $notifiable): array
     {
-        return ['database', 'mail'];
+        // 'broadcast' faz o sino piscar em tempo real via Reverb.
+        return ['database', 'mail', 'broadcast'];
+    }
+
+    public function toBroadcast(object $notifiable): BroadcastMessage
+    {
+        // O front decide ícone/cor pelo 'type'. O payload aqui é o que
+        // chega no Echo listener do NotificationBell.
+        return new BroadcastMessage($this->toArray($notifiable));
     }
 
     public function toMail(object $notifiable): MailMessage

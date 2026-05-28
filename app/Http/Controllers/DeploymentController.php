@@ -6,6 +6,7 @@ use App\Models\Column;
 use App\Models\Deployment;
 use App\Models\Item;
 use App\Models\User;
+use App\Events\ItemUpdated;
 use App\Notifications\DeploymentApproved;
 use App\Notifications\DeploymentRejected;
 use App\Notifications\DeploymentRequested;
@@ -93,6 +94,10 @@ class DeploymentController extends Controller
                     'is_urgent' => false,
                 ]);
                 $this->notifyAdmins($deployment, new DeploymentRequested($deployment));
+                // Real-time: outros boards abertos refletem o estado novo
+                // (modal do card ganha label "deploy em andamento", esconde
+                // os botões de solicitar de novo).
+                broadcast(new ItemUpdated($item->fresh('deployments')))->toOthers();
 
                 return back()->with('success', 'Deploy em homologação solicitado. Os admins foram notificados.');
             }
@@ -127,6 +132,7 @@ class DeploymentController extends Controller
             if ($isUrgent) {
                 $this->notifyAdmins($deployment, new ProductionDeployCompleted($deployment));
             }
+            broadcast(new ItemUpdated($item->fresh('deployments')))->toOthers();
 
             $msg = $isUrgent
                 ? 'Deploy URGENTE em produção registrado.'
@@ -156,6 +162,7 @@ class DeploymentController extends Controller
             new DeploymentApproved($deployment->fresh()));
         // Também notifica o deployer pra ele saber que pode promover.
         $deployment->deployer?->notify(new DeploymentApproved($deployment->fresh()));
+        broadcast(new ItemUpdated($deployment->item->fresh('deployments')))->toOthers();
 
         return back()->with('success', 'Deploy aprovado. Deployer e responsáveis foram notificados.');
     }
@@ -183,6 +190,7 @@ class DeploymentController extends Controller
         ]);
 
         $deployment->deployer?->notify(new DeploymentRejected($deployment->fresh()));
+        broadcast(new ItemUpdated($deployment->item->fresh('deployments')))->toOthers();
 
         return back()->with('success', 'Deploy rejeitado. O deployer foi notificado.');
     }

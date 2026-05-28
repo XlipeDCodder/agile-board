@@ -9,6 +9,10 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests; // Importa a trait
 
 use App\Events\ItemCreated;
+use App\Events\ItemUpdated;
+use App\Notifications\ItemAssignedNotification;
+use App\Models\User;
+use Illuminate\Support\Facades\Notification;
 
 class ItemController extends Controller
 {
@@ -114,12 +118,31 @@ class ItemController extends Controller
         $assigneeIds = $validated['assignee_ids'] ?? null;
         unset($validated['assignee_ids']);
 
+        // Captura assignees ANTES do sync pra detectar quem foi recém-adicionado.
+        $previousAssigneeIds = $item->assignees()->pluck('users.id')->all();
+
         $item->update($validated);
 
         if ($assigneeIds !== null) {
             $this->authorize('assignUsers', $item);
             $item->assignees()->sync($assigneeIds);
+
+            // Notifica APENAS os assignees novos (diff pós-sync).
+            // Quem já estava no card não recebe notificação repetida.
+            $newAssigneeIds = array_diff($assigneeIds, $previousAssigneeIds);
+            // Não notifica o próprio editor se ele se auto-adicionou.
+            $newAssigneeIds = array_diff($newAssigneeIds, [Auth::id()]);
+
+            if (! empty($newAssigneeIds)) {
+                $newAssignees = User::whereIn('id', $newAssigneeIds)->get();
+                Notification::send($newAssignees, new ItemAssignedNotification($item->fresh()));
+            }
         }
+
+        // Dispara broadcast pra todos os boards abertos atualizarem o card
+        // (real-time pra edição igual já temos pra movimentação).
+        // toOthers() omite quem fez a edição (já tem o estado novo via Inertia).
+        broadcast(new ItemUpdated($item->fresh()))->toOthers();
 
         return back();
     }

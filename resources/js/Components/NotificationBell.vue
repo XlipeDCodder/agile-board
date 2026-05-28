@@ -89,15 +89,46 @@ const iconFor = (type) => {
     }
 };
 
+// Listener Echo pra real-time. Quando uma Notification implementa
+// ShouldBroadcast (ou tem 'broadcast' no via()), o Laravel envia o evento
+// 'Illuminate\\Notifications\\Events\\BroadcastNotificationCreated' no
+// canal privado 'App.Models.User.{id}'. Quando chegar, incrementamos
+// a contagem e prepend na lista do dropdown — sem precisar refetch.
+let echoChannel = null;
+const setupEchoListener = (userId) => {
+    if (!window.Echo) return;
+    echoChannel = window.Echo.private(`App.Models.User.${userId}`);
+    echoChannel.notification((data) => {
+        unreadCount.value = (unreadCount.value || 0) + 1;
+        // Prepend uma representação leve no dropdown (ID temporário até refetch).
+        notifications.value.unshift({
+            id: data.id || `temp-${Date.now()}`,
+            type: data.type || 'unknown',
+            message: data.message || '(nova notificação)',
+            data: data,
+            read_at: null,
+            created_at: new Date().toISOString(),
+        });
+        if (notifications.value.length > 8) notifications.value.pop();
+    });
+};
+
 onMounted(() => {
     document.addEventListener('click', handleClickOutside);
-    // Polling de 60s pra atualizar a contagem mesmo sem abrir o dropdown.
-    pollTimer = setInterval(fetchDropdown, 60000);
+    const userId = page.props.auth?.user?.id;
+    if (userId) setupEchoListener(userId);
+    // Polling reduzido pra 5 min como fallback caso o WebSocket caia —
+    // o real-time via Echo é o caminho primário agora.
+    pollTimer = setInterval(fetchDropdown, 300000);
 });
 
 onUnmounted(() => {
     document.removeEventListener('click', handleClickOutside);
     if (pollTimer) clearInterval(pollTimer);
+    if (echoChannel) {
+        try { echoChannel.stopListening('.Illuminate\\Notifications\\Events\\BroadcastNotificationCreated'); }
+        catch (e) { /* ignore */ }
+    }
 });
 </script>
 
