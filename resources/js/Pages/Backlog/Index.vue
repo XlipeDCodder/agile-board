@@ -1,6 +1,8 @@
 <script setup>
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import Modal from '@/Components/Modal.vue';
+import MarkdownEditor from '@/Components/MarkdownEditor.vue';
+import MarkdownViewer from '@/Components/MarkdownViewer.vue';
 import Pagination from '@/Components/Pagination.vue';
 import { Head, router, useForm } from '@inertiajs/vue3';
 import { ref } from 'vue';
@@ -165,7 +167,7 @@ const addComment = () => {
 
                 <form v-if="activeTab === 'details'" @submit.prevent="saveItem" class="space-y-6">
                     <div><label class="block text-sm font-bold text-text-main mb-2">Título *</label><input type="text" v-model="itemForm.title" class="input-field w-full" required></div>
-                    <div><label class="block text-sm font-bold text-text-main mb-2">Descrição</label><textarea v-model="itemForm.description" rows="4" class="input-field w-full"></textarea></div>
+                    <div><label class="block text-sm font-bold text-text-main mb-2">Descrição</label><MarkdownEditor v-model="itemForm.description" :rows="5" placeholder="Descreva o card em Markdown… (cole imagens com Ctrl+V)" /></div>
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div><label class="block text-sm font-bold text-text-main mb-2">Tipo</label><select v-model="itemForm.type" class="input-field w-full"><option value="task">Tarefa</option><option value="bug">Bug</option></select></div>
                         <div><label class="block text-sm font-bold text-text-main mb-2">Prioridade</label><select v-model="itemForm.priority" class="input-field w-full"><option>Baixa</option><option>Média</option><option>Alta</option><option>Crítica</option></select></div>
@@ -248,7 +250,7 @@ const addComment = () => {
 
                 <div v-if="activeTab === 'comments' && itemForm.id" class="space-y-6">
                     <form @submit.prevent="addComment" class="space-y-4">
-                        <textarea v-model="newCommentForm.body" placeholder="Escreva um comentário..." rows="3" class="input-field w-full"></textarea>
+                        <MarkdownEditor v-model="newCommentForm.body" :rows="3" placeholder="Escreva um comentário em Markdown… (cole imagens com Ctrl+V)" />
                         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                             <div>
                                 <label class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-surface-hover border border-border-main text-sm text-text-muted cursor-pointer hover:text-text-main transition">
@@ -267,7 +269,7 @@ const addComment = () => {
                                 <div class="h-8 w-8 rounded-full bg-brand text-white flex items-center justify-center text-xs font-bold">{{ comment.user?.name?.charAt(0) }}</div>
                                 <div class="flex-1 min-w-0">
                                     <div class="flex items-center gap-2 mb-1"><p class="font-bold text-text-main text-sm">{{ comment.user?.name }}</p><p class="text-xs text-text-muted">{{ new Date(comment.created_at).toLocaleString() }}</p></div>
-                                    <p class="text-sm text-text-main whitespace-pre-wrap">{{ comment.body }}</p>
+                                    <MarkdownViewer :source="comment.body" class="text-sm text-text-main" />
                                     <div v-if="comment.attachments?.length > 0" class="mt-3 grid grid-cols-2 gap-2 border-t border-border-main/50 pt-3">
                                         <div v-for="attachment in comment.attachments" :key="attachment.id" class="relative group">
                                             <div v-if="attachment.mime_type?.startsWith('image/')" class="cursor-pointer overflow-hidden rounded-lg border border-border-main hover:opacity-90 transition" @click.stop="expandedImage = '/storage/' + attachment.file_path">

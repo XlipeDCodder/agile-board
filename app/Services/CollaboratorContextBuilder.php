@@ -13,6 +13,8 @@ use Carbon\Carbon;
 
 class CollaboratorContextBuilder
 {
+    public function __construct(private MarkdownStripper $stripper) {}
+
     /**
      * Monta um JSON-ready array com a "ficha" do colaborador para o LLM.
      *
@@ -70,21 +72,25 @@ class CollaboratorContextBuilder
                     ?? $item->updated_at?->toIso8601String();
             }
 
-            // Truncamos a descrição para não estourar tokens em cards com texto
-            // gigante, mas mantemos o suficiente para o LLM entender o conteúdo.
-            $description = $item->description
-                ? (mb_strlen($item->description) > 800
-                    ? mb_substr($item->description, 0, 800).'…'
-                    : $item->description)
+            // Strip de markdown (imagens viram [imagem: alt]) ANTES de truncar,
+            // pra o limite de chars contar texto útil e não URL de imagem.
+            $cleanDescription = $this->stripper->stripForLlm($item->description);
+            $description = $cleanDescription
+                ? (mb_strlen($cleanDescription) > 800
+                    ? mb_substr($cleanDescription, 0, 800).'…'
+                    : $cleanDescription)
                 : null;
 
             $commentsForItem = ($item->relationLoaded('comments') ? $item->comments : collect())
                 ->take(5)
-                ->map(fn ($c) => [
-                    'author' => $c->user?->name ?? '(desconhecido)',
-                    'at' => $c->created_at?->toIso8601String(),
-                    'snippet' => mb_strlen($c->body) > 300 ? mb_substr($c->body, 0, 300).'…' : $c->body,
-                ])->values()->all();
+                ->map(function ($c) {
+                    $body = $this->stripper->stripForLlm($c->body) ?? '';
+                    return [
+                        'author' => $c->user?->name ?? '(desconhecido)',
+                        'at' => $c->created_at?->toIso8601String(),
+                        'snippet' => mb_strlen($body) > 300 ? mb_substr($body, 0, 300).'…' : $body,
+                    ];
+                })->values()->all();
 
             return [
                 'id' => $item->id,
@@ -121,12 +127,15 @@ class CollaboratorContextBuilder
             ->orderByDesc('created_at')
             ->limit(50)
             ->get()
-            ->map(fn ($c) => [
-                'item_id' => $c->item_id,
-                'item_title' => $c->item?->title,
-                'at' => $c->created_at?->toIso8601String(),
-                'snippet' => mb_strlen($c->body) > 200 ? mb_substr($c->body, 0, 200).'…' : $c->body,
-            ])->all();
+            ->map(function ($c) {
+                $body = $this->stripper->stripForLlm($c->body) ?? '';
+                return [
+                    'item_id' => $c->item_id,
+                    'item_title' => $c->item?->title,
+                    'at' => $c->created_at?->toIso8601String(),
+                    'snippet' => mb_strlen($body) > 200 ? mb_substr($body, 0, 200).'…' : $body,
+                ];
+            })->all();
 
         // Todas as contagens abaixo ignoram subtarefas (parent_id NOT NULL) —
         // a unidade de análise do gestor é o card, não a subtarefa.

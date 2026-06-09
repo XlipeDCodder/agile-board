@@ -13,6 +13,8 @@ use Carbon\Carbon;
 
 class ProjectContextBuilder
 {
+    public function __construct(private MarkdownStripper $stripper) {}
+
     /**
      * Monta um JSON-ready array com a "ficha" do projeto para o LLM e para
      * geração de relatórios. Espelha o CollaboratorContextBuilder mas com o
@@ -59,19 +61,23 @@ class ProjectContextBuilder
                     ?? $item->updated_at?->toIso8601String();
             }
 
-            $description = $item->description
-                ? (mb_strlen($item->description) > 800
-                    ? mb_substr($item->description, 0, 800).'…'
-                    : $item->description)
+            $cleanDescription = $this->stripper->stripForLlm($item->description);
+            $description = $cleanDescription
+                ? (mb_strlen($cleanDescription) > 800
+                    ? mb_substr($cleanDescription, 0, 800).'…'
+                    : $cleanDescription)
                 : null;
 
             $commentsForItem = ($item->relationLoaded('comments') ? $item->comments : collect())
                 ->take(5)
-                ->map(fn ($c) => [
-                    'author' => $c->user?->name ?? '(desconhecido)',
-                    'at' => $c->created_at?->toIso8601String(),
-                    'snippet' => mb_strlen($c->body) > 300 ? mb_substr($c->body, 0, 300).'…' : $c->body,
-                ])->values()->all();
+                ->map(function ($c) {
+                    $body = $this->stripper->stripForLlm($c->body) ?? '';
+                    return [
+                        'author' => $c->user?->name ?? '(desconhecido)',
+                        'at' => $c->created_at?->toIso8601String(),
+                        'snippet' => mb_strlen($body) > 300 ? mb_substr($body, 0, 300).'…' : $body,
+                    ];
+                })->values()->all();
 
             return [
                 'id' => $item->id,
@@ -144,13 +150,16 @@ class ProjectContextBuilder
             ->orderByDesc('created_at')
             ->limit(50)
             ->get()
-            ->map(fn ($c) => [
-                'item_id' => $c->item_id,
-                'item_title' => $c->item?->title,
-                'author' => $c->user?->name,
-                'at' => $c->created_at?->toIso8601String(),
-                'snippet' => mb_strlen($c->body) > 200 ? mb_substr($c->body, 0, 200).'…' : $c->body,
-            ])->all();
+            ->map(function ($c) {
+                $body = $this->stripper->stripForLlm($c->body) ?? '';
+                return [
+                    'item_id' => $c->item_id,
+                    'item_title' => $c->item?->title,
+                    'author' => $c->user?->name,
+                    'at' => $c->created_at?->toIso8601String(),
+                    'snippet' => mb_strlen($body) > 200 ? mb_substr($body, 0, 200).'…' : $body,
+                ];
+            })->all();
 
         return [
             'project' => [

@@ -19,6 +19,7 @@ use App\Http\Controllers\CommentController;
 use App\Http\Controllers\ItemBlockController;
 use App\Http\Controllers\DeploymentController;
 use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\InlineImageController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\DashboardController;
 use Inertia\Inertia;
@@ -58,6 +59,7 @@ Route::middleware('auth')->group(function () {
     Route::patch('/columns/reorder', [ColumnController::class, 'reorder'])->name('columns.reorder');
     Route::get('/admin/columns', [ColumnManagementController::class, 'index'])->name('admin.columns.index');
     Route::post('/comments', [CommentController::class, 'store'])->name('comments.store');
+    Route::post('/uploads/inline-image', [InlineImageController::class, 'store'])->name('uploads.inline-image');
     Route::post('/items/{item}/block', [ItemBlockController::class, 'block'])->name('items.block');
     Route::post('/items/{item}/unblock', [ItemBlockController::class, 'unblock'])->name('items.unblock');
     Route::resource('projects', \App\Http\Controllers\ProjectController::class)->only(['index', 'store', 'update', 'destroy']);

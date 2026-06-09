@@ -3,6 +3,7 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import { Head } from '@inertiajs/vue3';
 import PieChart from '@/Components/PieChart.vue';
 import Modal from '@/Components/Modal.vue';
+import MarkdownViewer from '@/Components/MarkdownViewer.vue';
 import BarChart from '@/Components/BarChart.vue';
 import { computed, ref } from 'vue';
 import { useForm } from '@inertiajs/vue3';
@@ -340,7 +341,10 @@ const getRankColor = (index) => {
                         </div>
                          <div>
                             <label class="block text-sm font-medium">Descrição</label>
-                            <textarea v-model="editItemForm.description" rows="3" class="mt-1 block w-full rounded-md bg-primary border-accent text-text-primary shadow-sm" disabled></textarea>
+                            <div class="mt-1 block w-full rounded-md bg-primary border border-accent text-text-primary shadow-sm px-3 py-2 min-h-[4rem] text-sm">
+                                <MarkdownViewer v-if="editItemForm.description" :source="editItemForm.description" />
+                                <span v-else class="text-text-secondary italic">Sem descrição</span>
+                            </div>
                         </div>
                         
                         <div>
