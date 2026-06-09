@@ -1,5 +1,6 @@
 <script setup>
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
+import Icon from '@/Components/Icon.vue';
 import { Head } from '@inertiajs/vue3';
 import PieChart from '@/Components/PieChart.vue';
 import Modal from '@/Components/Modal.vue';
@@ -157,9 +158,9 @@ const getRankColor = (index) => {
     <AuthenticatedLayout>
         <template #header>
             <h2
-                class="text-xl font-semibold leading-tight text-gray-800"
+                class="text-xl font-semibold leading-tight text-gray-800 inline-flex items-center gap-2"
             >
-                Dashboard
+                <Icon name="dashboard" :size="22" /> Dashboard
             </h2>
         </template>
 

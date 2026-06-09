@@ -2,6 +2,7 @@
 import { ref } from 'vue';
 import axios from 'axios';
 import MarkdownViewer from '@/Components/MarkdownViewer.vue';
+import Icon from '@/Components/Icon.vue';
 
 const props = defineProps({
     modelValue: { type: String, default: '' },
@@ -46,7 +47,7 @@ const toolbar = [
     { label: 'H', title: 'Título', action: () => insertAtCursor('## ', '', 'Título') },
     { label: '•', title: 'Lista', action: () => insertAtCursor('- ', '', 'item') },
     { label: '<>', title: 'Código', action: () => insertAtCursor('`', '`', 'código') },
-    { label: '🔗', title: 'Link', action: () => insertAtCursor('[', '](https://)', 'texto') },
+    { label: 'link', icon: true, title: 'Link', action: () => insertAtCursor('[', '](https://)', 'texto') },
 ];
 
 const uploadImage = async (file) => {
@@ -123,15 +124,16 @@ const onFilePick = (e) => {
                 </button>
             </div>
             <div v-if="activeTab === 'write'" class="flex items-center gap-0.5">
-                <button v-for="btn in toolbar" :key="btn.label" type="button"
+                <button v-for="btn in toolbar" :key="btn.title" type="button"
                     @click="btn.action" :title="btn.title"
-                    :class="['w-7 h-7 rounded text-xs font-bold text-text-muted hover:bg-surface-hover hover:text-text-main transition',
+                    :class="['w-7 h-7 inline-flex items-center justify-center rounded text-xs font-bold text-text-muted hover:bg-surface-hover hover:text-text-main transition',
                         btn.italic ? 'italic' : '']">
-                    {{ btn.label }}
+                    <Icon v-if="btn.icon" :name="btn.label" :size="15" />
+                    <span v-else>{{ btn.label }}</span>
                 </button>
                 <button type="button" @click="fileInputRef?.click()" title="Inserir imagem"
-                    class="w-7 h-7 rounded text-sm text-text-muted hover:bg-surface-hover hover:text-text-main transition">
-                    🖼️
+                    class="w-7 h-7 inline-flex items-center justify-center rounded text-text-muted hover:bg-surface-hover hover:text-text-main transition">
+                    <Icon name="image" :size="15" />
                 </button>
                 <input ref="fileInputRef" type="file" accept="image/png,image/jpeg,image/gif,image/webp"
                     multiple class="hidden" @change="onFilePick">

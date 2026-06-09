@@ -2,6 +2,7 @@
 import { ref, onMounted, onUnmounted, computed } from 'vue';
 import { Link, router, usePage } from '@inertiajs/vue3';
 import axios from 'axios';
+import Icon from '@/Components/Icon.vue';
 
 const page = usePage();
 
@@ -79,13 +80,14 @@ const formatRelative = (iso) => {
     return d.toLocaleDateString('pt-BR');
 };
 
+// Mapa tipo → {nome do ícone Lucide, cor}. Usado no dropdown e na página.
 const iconFor = (type) => {
     switch (type) {
-        case 'deployment_requested': return '🚀';
-        case 'deployment_approved': return '✅';
-        case 'deployment_rejected': return '❌';
-        case 'production_deploy_completed': return '🎉';
-        default: return '🔔';
+        case 'deployment_requested': return { name: 'deploys', color: 'text-amber-500' };
+        case 'deployment_approved': return { name: 'check', color: 'text-emerald-500' };
+        case 'deployment_rejected': return { name: 'circle-x', color: 'text-trello-red' };
+        case 'production_deploy_completed': return { name: 'party', color: 'text-brand' };
+        default: return { name: 'bell', color: 'text-text-muted' };
     }
 };
 
@@ -138,10 +140,7 @@ onUnmounted(() => {
                 type="button"
                 class="relative inline-flex items-center rounded-lg border border-border-main bg-surface-variant px-3 py-2 text-sm text-text-main transition hover:border-brand hover:bg-surface focus:outline-none"
                 :title="`${unreadCount} notificação(ões) não lida(s)`">
-            <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                      d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-            </svg>
+            <Icon name="bell" :size="20" />
             <span v-if="unreadCount > 0"
                   class="absolute -top-1 -right-1 inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 text-[10px] font-bold leading-none text-white bg-trello-red rounded-full">
                 {{ unreadCount > 99 ? '99+' : unreadCount }}
@@ -166,7 +165,9 @@ onUnmounted(() => {
                         @click="markRead(n)"
                         class="w-full text-left px-4 py-3 border-b border-border-main hover:bg-surface transition flex gap-3"
                         :class="{ 'bg-brand/5': !n.read_at }">
-                    <div class="text-xl flex-shrink-0">{{ iconFor(n.type) }}</div>
+                    <div class="flex-shrink-0 mt-0.5" :class="iconFor(n.type).color">
+                        <Icon :name="iconFor(n.type).name" :size="18" />
+                    </div>
                     <div class="flex-1 min-w-0">
                         <p class="text-sm text-text-main" :class="{ 'font-bold': !n.read_at }">
                             {{ n.message }}

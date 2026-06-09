@@ -1,5 +1,6 @@
 <script setup>
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
+import Icon from '@/Components/Icon.vue';
 import { Head, router } from '@inertiajs/vue3';
 import { ref } from 'vue';
 
@@ -27,7 +28,7 @@ const goCollaborator = () => {
     <Head title="Relatórios" />
     <AuthenticatedLayout>
         <template #header>
-            <h2 class="font-bold text-4xl text-text-main leading-tight">📊 Relatórios</h2>
+            <h2 class="font-bold text-4xl text-text-main leading-tight inline-flex items-center gap-3"><Icon name="reports" :size="32" /> Relatórios</h2>
         </template>
 
         <div class="py-8 px-4 sm:px-6 lg:px-8 max-w-5xl mx-auto">
@@ -41,13 +42,13 @@ const goCollaborator = () => {
                         @click="tab = 'project'"
                         :class="['px-4 py-2 font-medium border-b-2 transition', tab === 'project' ? 'border-brand text-brand' : 'border-transparent text-text-muted hover:text-text-main']"
                     >
-                        📁 Por Projeto
+                        <span class="inline-flex items-center gap-1.5"><Icon name="projects" :size="16" /> Por Projeto</span>
                     </button>
                     <button
                         @click="tab = 'collaborator'"
                         :class="['px-4 py-2 font-medium border-b-2 transition', tab === 'collaborator' ? 'border-brand text-brand' : 'border-transparent text-text-muted hover:text-text-main']"
                     >
-                        👤 Por Colaborador
+                        <span class="inline-flex items-center gap-1.5"><Icon name="user" :size="16" /> Por Colaborador</span>
                     </button>
                 </div>
 

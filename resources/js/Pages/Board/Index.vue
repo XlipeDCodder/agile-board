@@ -3,6 +3,7 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import Modal from '@/Components/Modal.vue';
 import MarkdownEditor from '@/Components/MarkdownEditor.vue';
 import MarkdownViewer from '@/Components/MarkdownViewer.vue';
+import Icon from '@/Components/Icon.vue';
 import { Head, router, useForm } from '@inertiajs/vue3';
 import { ref, computed, onMounted, watch } from 'vue';
 import draggable from 'vuedraggable';
@@ -467,7 +468,7 @@ const matchesFilter = (item) => {
     <AuthenticatedLayout>
         <template #header>
             <div class="flex justify-between items-center">
-                <h2 class="font-bold text-4xl text-text-main leading-tight">📋 Quadro Kanban</h2>
+                <h2 class="font-bold text-4xl text-text-main leading-tight inline-flex items-center gap-3"><Icon name="board" :size="32" /> Quadro Kanban</h2>
             </div>
         </template>
 
@@ -475,10 +476,8 @@ const matchesFilter = (item) => {
             <!-- Filtros -->
             <div class="mb-8 flex flex-col md:flex-row gap-4">
                 <div class="relative flex-1 max-w-sm">
-                    <svg class="absolute inset-y-0 left-3 h-5 w-5 text-text-muted pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                    </svg>
-                    <input 
+                    <span class="absolute inset-y-0 left-3 flex items-center text-text-muted pointer-events-none"><Icon name="search" :size="20" /></span>
+                    <input
                         v-model="searchQuery" 
                         type="text" 
                         placeholder="Buscar por ID ou título..." 
@@ -501,7 +500,7 @@ const matchesFilter = (item) => {
                                 <p class="text-xs text-text-muted mt-1 font-medium">{{ column.items.length }} itens</p>
                             </div>
                             <button @click="openCreateItemModal(column.id)" class="p-2.5 rounded-lg hover:bg-surface-hover transition text-text-muted hover:text-brand hover:scale-110 active:scale-95">
-                                <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4" /></svg>
+                                <Icon name="plus" :size="20" :stroke-width="2.5" />
                             </button>
                         </div>
 
@@ -514,23 +513,23 @@ const matchesFilter = (item) => {
                                     <div v-if="item.is_blocked || item.type === 'reabertura' || (item.predicted_value && item.predicted_unit)" class="flex flex-wrap gap-1.5 mb-2">
                                         <span v-if="item.is_blocked" :title="item.blocked_reason || 'Impedido'"
                                             class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold bg-trello-red/10 text-trello-red border border-trello-red/30">
-                                            🚫 Impedido
+                                            <Icon name="block" :size="12" /> Impedido
                                         </span>
                                         <span v-if="item.type === 'reabertura'" :title="`Reaberto do card #${item.reopened_from_id}`"
                                             class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold bg-orange-500/10 text-orange-500 border border-orange-500/30">
-                                            🔄 Reaberto de #{{ item.reopened_from_id }}
+                                            <Icon name="reopen" :size="12" /> Reaberto de #{{ item.reopened_from_id }}
                                         </span>
                                         <span v-if="item.predicted_value && item.predicted_unit"
                                             class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-surface text-text-muted border border-border-main">
-                                            ⏱️ {{ predictedLabel(item) }}
+                                            <Icon name="time-entries" :size="12" /> {{ predictedLabel(item) }}
                                         </span>
                                     </div>
 
                                     <div class="flex justify-between items-start mb-3">
                                         <h3 class="font-bold text-text-main flex-1 group-hover:text-brand transition line-clamp-2">{{ item.title }}</h3>
                                         <div class="flex items-center gap-1.5 flex-shrink-0 ml-2">
-                                            <span v-if="isBug(item)" class="text-trello-red"><svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" /></svg></span>
-                                            <span v-else class="text-brand"><svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" /></svg></span>
+                                            <span v-if="isBug(item)" class="text-trello-red" title="Bug"><Icon name="circle-alert" :size="16" /></span>
+                                            <span v-else class="text-brand" title="Tarefa"><Icon name="circle-dot" :size="16" /></span>
                                         </div>
                                     </div>
                                     <p v-if="item.description" class="text-sm text-text-muted mb-3 line-clamp-2">{{ item.description }}</p>
@@ -545,7 +544,7 @@ const matchesFilter = (item) => {
                                         <span class="px-2 py-0.5 rounded-full text-xs font-bold" :class="priorityClasses(item.priority)">{{ item.priority }}</span>
                                     </div>
                                     <div class="flex items-center justify-between">
-                                        <div v-if="item.subtasks?.length > 0" class="text-xs text-text-muted font-medium">📋 {{ item.subtasks.filter(s => s.completed_at).length }}/{{ item.subtasks.length }}</div>
+                                        <div v-if="item.subtasks?.length > 0" class="inline-flex items-center gap-1 text-xs text-text-muted font-medium"><Icon name="subtasks" :size="13" /> {{ item.subtasks.filter(s => s.completed_at).length }}/{{ item.subtasks.length }}</div>
                                         <div class="flex -space-x-2">
                                             <div v-for="assignee in item.assignees.slice(0, 3)" :key="assignee.id" class="h-6 w-6 rounded-full ring-2 ring-surface-variant bg-brand text-white flex items-center justify-center text-xs font-bold" :title="assignee.name">{{ assignee.name.charAt(0).toUpperCase() }}</div>
                                         </div>
@@ -561,42 +560,43 @@ const matchesFilter = (item) => {
         <Modal :show="showItemModal" @close="closeModal" max-width="3xl">
             <div class="p-6 bg-surface-variant max-h-[90vh] overflow-y-auto">
                 <div class="flex items-start justify-between gap-4 mb-6">
-                    <h2 class="text-2xl font-bold text-text-main">
-                        {{ itemForm.id ? '✏️ Editar Item' : '➕ Novo Item' }}
-                        <span v-if="itemForm.type === 'reabertura'" class="text-base font-medium text-orange-500 ml-2">🔄 Reabertura</span>
+                    <h2 class="text-2xl font-bold text-text-main inline-flex items-center gap-2">
+                        <Icon :name="itemForm.id ? 'edit' : 'plus'" :size="22" />
+                        {{ itemForm.id ? 'Editar Item' : 'Novo Item' }}
+                        <span v-if="itemForm.type === 'reabertura'" class="text-base font-medium text-orange-500 ml-2 inline-flex items-center gap-1"><Icon name="reopen" :size="16" /> Reabertura</span>
                     </h2>
                     <div v-if="itemForm.id" class="flex items-center gap-2 flex-wrap justify-end">
                         <!-- Botões de deploy só pra cards em Feito -->
                         <button v-if="canRequestStaging"
                             type="button"
                             @click="openDeployModal('staging')"
-                            class="px-3 py-1.5 rounded-lg text-sm font-medium bg-amber-500/10 text-amber-600 border border-amber-500/30 hover:bg-amber-500/20 transition">
-                            🚀 Deploy em homologação
+                            class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium bg-amber-500/10 text-amber-600 border border-amber-500/30 hover:bg-amber-500/20 transition">
+                            <Icon name="deploys" :size="16" /> Deploy em homologação
                         </button>
                         <button v-if="canRequestUrgent"
                             type="button"
                             @click="openDeployModal('urgent')"
-                            class="px-3 py-1.5 rounded-lg text-sm font-medium bg-trello-red/10 text-trello-red border border-trello-red/30 hover:bg-trello-red/20 transition">
-                            ⚠️ Deploy urgente em produção
+                            class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium bg-trello-red/10 text-trello-red border border-trello-red/30 hover:bg-trello-red/20 transition">
+                            <Icon name="warning" :size="16" /> Deploy urgente em produção
                         </button>
                         <!-- Badges informativos quando já há deploy em andamento -->
                         <span v-if="isInFeito && hasProductionDeploy"
-                            class="px-3 py-1.5 rounded-lg text-sm font-medium bg-emerald-500/10 text-emerald-600 border border-emerald-500/30">
-                            ✅ Em produção
+                            class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium bg-emerald-500/10 text-emerald-600 border border-emerald-500/30">
+                            <Icon name="check" :size="16" /> Em produção
                         </span>
                         <span v-else-if="isInFeito && hasApprovedStaging"
-                            class="px-3 py-1.5 rounded-lg text-sm font-medium bg-brand/10 text-brand border border-brand/30">
-                            🟢 Aprovado — aguardando produção
+                            class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium bg-brand/10 text-brand border border-brand/30">
+                            <Icon name="circle-dot" :size="16" /> Aprovado — aguardando produção
                         </span>
                         <span v-else-if="isInFeito && hasPendingStaging"
-                            class="px-3 py-1.5 rounded-lg text-sm font-medium bg-amber-500/10 text-amber-600 border border-amber-500/30">
-                            🟡 Em HML aguardando aprovação
+                            class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium bg-amber-500/10 text-amber-600 border border-amber-500/30">
+                            <Icon name="hourglass" :size="16" /> Em HML aguardando aprovação
                         </span>
                         <button v-if="isInFeito"
                             type="button"
                             @click="openReopenFromBoard"
-                            class="px-3 py-1.5 rounded-lg text-sm font-medium bg-orange-500/10 text-orange-500 border border-orange-500/30 hover:bg-orange-500/20 transition">
-                            🔄 Reabrir card
+                            class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium bg-orange-500/10 text-orange-500 border border-orange-500/30 hover:bg-orange-500/20 transition">
+                            <Icon name="reopen" :size="16" /> Reabrir card
                         </button>
                         <!--
                             Cards em "Feito" não têm controles de impedimento:
@@ -606,28 +606,28 @@ const matchesFilter = (item) => {
                         <button v-if="currentItem?.is_blocked && !isInFeito"
                             type="button"
                             @click="unblockCard"
-                            class="px-3 py-1.5 rounded-lg text-sm font-medium bg-emerald-500/10 text-emerald-500 border border-emerald-500/30 hover:bg-emerald-500/20 transition">
-                            ✅ Desimpedir
+                            class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium bg-emerald-500/10 text-emerald-500 border border-emerald-500/30 hover:bg-emerald-500/20 transition">
+                            <Icon name="check" :size="16" /> Desimpedir
                         </button>
                         <button v-else-if="!isInFeito"
                             type="button"
                             @click="openBlockModal"
-                            class="px-3 py-1.5 rounded-lg text-sm font-medium bg-trello-red/10 text-trello-red border border-trello-red/30 hover:bg-trello-red/20 transition">
-                            🚫 Marcar como impedimento
+                            class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium bg-trello-red/10 text-trello-red border border-trello-red/30 hover:bg-trello-red/20 transition">
+                            <Icon name="block" :size="16" /> Marcar como impedimento
                         </button>
                     </div>
                 </div>
 
                 <div v-if="currentItem?.is_blocked" class="mb-4 p-3 rounded-xl bg-trello-red/10 border border-trello-red/30 text-sm">
-                    <p class="font-bold text-trello-red mb-1">🚫 Card impedido</p>
+                    <p class="font-bold text-trello-red mb-1 inline-flex items-center gap-1.5"><Icon name="block" :size="16" /> Card impedido</p>
                     <p class="text-text-main"><strong>Motivo:</strong> {{ currentItem.blocked_reason }}</p>
                     <p v-if="currentItem.blocked_by_item_id" class="text-text-muted mt-1">Bloqueado pelo card #{{ currentItem.blocked_by_item_id }}</p>
                 </div>
 
                 <div v-if="itemForm.id" class="flex gap-2 mb-6 border-b border-border-main">
-                    <button @click="activeTab = 'details'" :class="['px-4 py-2 font-medium border-b-2 transition', activeTab === 'details' ? 'border-brand text-brand' : 'border-transparent text-text-muted hover:text-text-main']">📝 Detalhes</button>
-                    <button @click="activeTab = 'subtasks'" :class="['px-4 py-2 font-medium border-b-2 transition', activeTab === 'subtasks' ? 'border-brand text-brand' : 'border-transparent text-text-muted hover:text-text-main']">📋 Subtarefas ({{ itemForm.subtasks?.filter(s => s.completed_at).length || 0 }}/{{ itemForm.subtasks?.length || 0 }})</button>
-                    <button @click="activeTab = 'comments'" :class="['px-4 py-2 font-medium border-b-2 transition', activeTab === 'comments' ? 'border-brand text-brand' : 'border-transparent text-text-muted hover:text-text-main']">💬 Comentários ({{ itemForm.comments?.length || 0 }})</button>
+                    <button @click="activeTab = 'details'" :class="['inline-flex items-center gap-1.5 px-4 py-2 font-medium border-b-2 transition', activeTab === 'details' ? 'border-brand text-brand' : 'border-transparent text-text-muted hover:text-text-main']"><Icon name="details" :size="16" /> Detalhes</button>
+                    <button @click="activeTab = 'subtasks'" :class="['inline-flex items-center gap-1.5 px-4 py-2 font-medium border-b-2 transition', activeTab === 'subtasks' ? 'border-brand text-brand' : 'border-transparent text-text-muted hover:text-text-main']"><Icon name="subtasks" :size="16" /> Subtarefas ({{ itemForm.subtasks?.filter(s => s.completed_at).length || 0 }}/{{ itemForm.subtasks?.length || 0 }})</button>
+                    <button @click="activeTab = 'comments'" :class="['inline-flex items-center gap-1.5 px-4 py-2 font-medium border-b-2 transition', activeTab === 'comments' ? 'border-brand text-brand' : 'border-transparent text-text-muted hover:text-text-main']"><Icon name="comments" :size="16" /> Comentários ({{ itemForm.comments?.length || 0 }})</button>
                 </div>
 
                 <form v-if="activeTab === 'details'" @submit.prevent="saveItem" class="space-y-6">
@@ -683,7 +683,7 @@ const matchesFilter = (item) => {
                         </div>
                         <div v-if="itemForm.type === 'reabertura'" class="md:col-span-2 p-4 rounded-xl bg-orange-500/10 border border-orange-500/30 space-y-3">
                             <div>
-                                <label class="block text-sm font-bold text-text-main mb-1">🔄 Card original</label>
+                                <label class="block text-sm font-bold text-text-main mb-1 inline-flex items-center gap-1.5"><Icon name="reopen" :size="14" /> Card original</label>
                                 <p class="text-sm text-text-main">#{{ itemForm.reopened_from_id }}</p>
                             </div>
                             <div>
@@ -698,7 +698,7 @@ const matchesFilter = (item) => {
 
                 <div v-if="activeTab === 'subtasks' && itemForm.id" class="space-y-4">
                     <div v-if="itemForm.subtasks?.length === 0" class="text-center py-8 text-text-muted">
-                        Nenhuma subtarefa ainda. Adicione abaixo. 👇
+                        Nenhuma subtarefa ainda. Adicione abaixo.
                     </div>
                     <div v-else class="space-y-2">
                         <div v-for="subtask in itemForm.subtasks" :key="subtask.id"
@@ -711,8 +711,8 @@ const matchesFilter = (item) => {
                                 :class="subtask.completed_at ? 'line-through text-text-muted' : 'text-text-main'">
                                 {{ subtask.title }}
                             </span>
-                            <span v-if="subtask.completed_at" class="text-xs text-text-muted">
-                                ✓ {{ new Date(subtask.completed_at).toLocaleDateString('pt-BR') }}
+                            <span v-if="subtask.completed_at" class="inline-flex items-center gap-1 text-xs text-text-muted">
+                                <Icon name="check" :size="13" class="text-emerald-500" /> {{ new Date(subtask.completed_at).toLocaleDateString('pt-BR') }}
                             </span>
                         </div>
                     </div>
@@ -722,8 +722,8 @@ const matchesFilter = (item) => {
                             placeholder="Nova subtarefa..."
                             class="input-field flex-1" required>
                         <button type="submit" :disabled="newSubtaskForm.processing || !newSubtaskForm.title"
-                            class="btn-primary disabled:opacity-50 disabled:cursor-not-allowed">
-                            + Adicionar
+                            class="btn-primary inline-flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed">
+                            <Icon name="plus" :size="16" /> Adicionar
                         </button>
                     </form>
                 </div>
@@ -734,7 +734,7 @@ const matchesFilter = (item) => {
                         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                             <div>
                                 <label class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-surface-hover border border-border-main text-sm text-text-muted cursor-pointer hover:text-text-main transition">
-                                    📎 Anexar arquivos
+                                    <Icon name="attach" :size="16" /> Anexar arquivos
                                     <input type="file" id="comment-files" @input="newCommentForm.files = $event.target.files" multiple class="hidden">
                                 </label>
                                 <div v-if="newCommentForm.files?.length > 0" class="mt-2 flex flex-wrap gap-2"><span v-for="f in newCommentForm.files" :key="f.name" class="text-xs px-2 py-1 rounded bg-brand/10 text-brand">{{ f.name }}</span></div>
@@ -758,7 +758,7 @@ const matchesFilter = (item) => {
                                             </div>
                                             <div v-else class="flex items-center p-2 rounded-lg border border-border-main bg-surface-variant hover:bg-surface-hover transition">
                                                 <a :href="'/storage/' + attachment.file_path" download target="_blank" @click.stop class="flex items-center gap-2 w-full text-text-main text-xs truncate">
-                                                    <svg class="h-4 w-4 text-text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                                                    <Icon name="download" :size="16" class="text-text-muted" />
                                                     <span class="truncate">{{ attachment.file_name }}</span>
                                                 </a>
                                             </div>
@@ -790,7 +790,7 @@ const matchesFilter = (item) => {
         <!-- Sub-modal: reabrir card concluído (acessível diretamente do Board) -->
         <Modal :show="showReopenModal" @close="showReopenModal = false" max-width="3xl">
             <div class="p-6 bg-surface-variant max-h-[90vh] overflow-y-auto">
-                <h3 class="text-2xl font-bold text-text-main mb-1">🔄 Reabrir card</h3>
+                <h3 class="text-2xl font-bold text-text-main mb-1 inline-flex items-center gap-2"><Icon name="reopen" :size="22" /> Reabrir card</h3>
                 <p class="text-sm text-text-muted mb-5" v-if="currentItem">
                     Criando uma reabertura vinculada ao card <strong class="text-text-main">#{{ currentItem.id }} "{{ currentItem.title }}"</strong>. O card original permanecerá em Feito.
                 </p>
@@ -854,8 +854,8 @@ const matchesFilter = (item) => {
                         <button type="button" @click="showReopenModal = false" class="btn-secondary">Cancelar</button>
                         <button type="submit"
                             :disabled="reopenForm.processing || !reopenForm.justification || !reopenForm.title || !reopenForm.column_id"
-                            class="btn-primary disabled:opacity-50 disabled:cursor-not-allowed">
-                            🔄 Criar reabertura
+                            class="btn-primary inline-flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed">
+                            <Icon name="reopen" :size="16" /> Criar reabertura
                         </button>
                     </div>
                 </form>
@@ -865,7 +865,7 @@ const matchesFilter = (item) => {
         <!-- Sub-modal: marcar como impedimento -->
         <Modal :show="showBlockModal" @close="showBlockModal = false" max-width="lg">
             <div class="p-6 bg-surface-variant">
-                <h3 class="text-lg font-bold text-text-main mb-1">🚫 Marcar como impedimento</h3>
+                <h3 class="text-lg font-bold text-text-main mb-1 inline-flex items-center gap-2"><Icon name="block" :size="18" /> Marcar como impedimento</h3>
                 <p class="text-sm text-text-muted mb-5">Descreva por que o card está impedido. Opcionalmente, indique qual outro card está causando o bloqueio.</p>
 
                 <form @submit.prevent="submitBlock" class="space-y-4">
@@ -900,7 +900,7 @@ const matchesFilter = (item) => {
             <div class="p-2 bg-black flex justify-center items-center h-full relative min-h-[50vh]" @click="expandedImage = null">
                 <img :src="expandedImage" class="max-w-full max-h-[85vh] object-contain">
                 <button class="absolute top-4 right-4 text-white hover:text-gray-300" @click.stop="expandedImage = null">
-                    <svg class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M6 18L18 6M6 6l12 12" /></svg>
+                    <Icon name="x" :size="32" />
                 </button>
             </div>
         </Modal>
@@ -909,8 +909,8 @@ const matchesFilter = (item) => {
         <Modal :show="showDeployModal" @close="showDeployModal = false" max-width="lg">
             <form @submit.prevent="submitDeploy" class="p-6 bg-surface-variant space-y-4">
                 <h3 class="text-lg font-bold text-text-main">
-                    <span v-if="deployModalMode === 'staging'">🚀 Solicitar deploy em homologação</span>
-                    <span v-else class="text-trello-red">⚠️ Deploy urgente em produção</span>
+                    <span v-if="deployModalMode === 'staging'" class="inline-flex items-center gap-1.5"><Icon name="deploys" :size="18" /> Solicitar deploy em homologação</span>
+                    <span v-else class="text-trello-red inline-flex items-center gap-1.5"><Icon name="warning" :size="18" /> Deploy urgente em produção</span>
                 </h3>
                 <p v-if="deployModalMode === 'urgent'" class="text-sm text-trello-red bg-trello-red/10 border border-trello-red/30 rounded-lg p-3">
                     <strong>Atenção:</strong> esse deploy <strong>pula a etapa de homologação</strong>. Use só em casos de hotfix ou emergência. Os admins serão notificados.

@@ -1,5 +1,6 @@
 <script setup>
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
+import Icon from '@/Components/Icon.vue';
 import { Head, router, Link } from '@inertiajs/vue3';
 import { computed } from 'vue';
 
@@ -15,11 +16,11 @@ const formatDate = (iso) => {
 
 const iconFor = (type) => {
     switch (type) {
-        case 'deployment_requested': return '🚀';
-        case 'deployment_approved': return '✅';
-        case 'deployment_rejected': return '❌';
-        case 'production_deploy_completed': return '🎉';
-        default: return '🔔';
+        case 'deployment_requested': return { name: 'deploys', color: 'text-amber-500' };
+        case 'deployment_approved': return { name: 'check', color: 'text-emerald-500' };
+        case 'deployment_rejected': return { name: 'circle-x', color: 'text-trello-red' };
+        case 'production_deploy_completed': return { name: 'party', color: 'text-brand' };
+        default: return { name: 'bell', color: 'text-text-muted' };
     }
 };
 
@@ -46,7 +47,7 @@ const unreadCount = computed(() => props.notifications.data.filter(n => !n.read_
     <Head title="Notificações" />
     <AuthenticatedLayout>
         <template #header>
-            <h2 class="font-bold text-4xl text-text-main leading-tight">🔔 Notificações</h2>
+            <h2 class="font-bold text-4xl text-text-main leading-tight inline-flex items-center gap-3"><Icon name="bell" :size="32" /> Notificações</h2>
         </template>
 
         <div class="py-8 px-4 sm:px-6 lg:px-8 max-w-4xl mx-auto space-y-6">
@@ -62,14 +63,14 @@ const unreadCount = computed(() => props.notifications.data.filter(n => !n.read_
 
             <div class="bg-surface-variant border border-border-main rounded-2xl shadow-sm overflow-hidden">
                 <div v-if="notifications.data.length === 0" class="p-12 text-center text-text-muted">
-                    <div class="text-5xl mb-3">🔕</div>
+                    <div class="flex justify-center mb-3 text-text-muted"><Icon name="bell-off" :size="48" /></div>
                     <p>Nenhuma notificação ainda.</p>
                 </div>
                 <button v-else v-for="n in notifications.data" :key="n.id"
                         @click="markRead(n)"
                         class="w-full text-left px-5 py-4 border-b border-border-main hover:bg-surface transition flex gap-4 items-start"
                         :class="{ 'bg-brand/5': !n.read_at }">
-                    <div class="text-2xl flex-shrink-0">{{ iconFor(n.type) }}</div>
+                    <div class="flex-shrink-0 mt-0.5" :class="iconFor(n.type).color"><Icon :name="iconFor(n.type).name" :size="22" /></div>
                     <div class="flex-1 min-w-0">
                         <p class="text-sm text-text-main" :class="{ 'font-bold': !n.read_at }">
                             {{ n.message }}

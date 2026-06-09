@@ -1,5 +1,6 @@
 <script setup>
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
+import Icon from '@/Components/Icon.vue';
 import { Head, useForm, usePage, Link, router } from '@inertiajs/vue3';
 import { ref, computed } from 'vue';
 import axios from 'axios';
@@ -65,12 +66,12 @@ const modelSuggestions = {
     <Head title="Bot Config" />
     <AuthenticatedLayout>
         <template #header>
-            <h2 class="font-bold text-4xl text-text-main leading-tight">🤖 Bot Config</h2>
+            <h2 class="font-bold text-4xl text-text-main leading-tight inline-flex items-center gap-3"><Icon name="bot" :size="32" /> Bot Config</h2>
         </template>
 
         <div class="py-8 px-4 sm:px-6 lg:px-8 max-w-3xl mx-auto space-y-6">
             <div class="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-sm text-text-main">
-                <p class="font-bold mb-1">⚠️ Configurações sensíveis</p>
+                <p class="font-bold mb-1 inline-flex items-center gap-1.5"><Icon name="warning" :size="16" /> Configurações sensíveis</p>
                 <p class="text-text-muted">
                     Estas configurações controlam o assistente Icarus. <strong>A chave de API dá acesso pago ao provedor</strong> — não compartilhe. Ao usar o bot, dados internos (nomes, comentários, projetos) serão enviados para o provedor escolhido.
                 </p>
@@ -127,7 +128,7 @@ const modelSuggestions = {
             <div class="bg-surface-variant border border-border-main rounded-2xl p-6 shadow-sm space-y-4">
                 <div>
                     <h3 class="font-bold text-lg text-text-main flex items-center gap-2">
-                        <span>🔗</span>
+                        <Icon name="link" :size="18" />
                         <span>Conexão Google Workspace</span>
                     </h3>
                     <p class="text-text-muted text-sm mt-1">
@@ -149,8 +150,8 @@ const modelSuggestions = {
 
                 <div v-else-if="googleConnection" class="flex items-center justify-between gap-4">
                     <div class="text-sm">
-                        <p class="text-text-main">
-                            ✅ Conectado como <strong>{{ googleConnection.google_email }}</strong>
+                        <p class="text-text-main inline-flex items-center gap-1.5">
+                            <Icon name="check" :size="16" class="text-emerald-500" /> Conectado como <strong>{{ googleConnection.google_email }}</strong>
                         </p>
                         <p class="text-text-muted text-xs mt-1" v-if="googleConnection.expires_at">
                             Sessão atual expira automaticamente; o token é renovado quando necessário.

@@ -3,6 +3,7 @@ import { ref, nextTick, computed } from 'vue';
 import axios from 'axios';
 import { marked } from 'marked';
 import DOMPurify from 'dompurify';
+import Icon from '@/Components/Icon.vue';
 
 marked.setOptions({ breaks: true, gfm: true });
 
@@ -103,9 +104,9 @@ const onEnter = (e) => {
         v-if="!isOpen"
         @click="open"
         title="Falar com Icarus"
-        class="fixed bottom-6 right-6 z-40 h-14 w-14 rounded-full bg-brand text-white text-2xl shadow-2xl hover:scale-110 hover:shadow-brand/50 transition flex items-center justify-center"
+        class="fixed bottom-6 right-6 z-40 h-14 w-14 rounded-full bg-brand text-white shadow-2xl hover:scale-110 hover:shadow-brand/50 transition flex items-center justify-center"
     >
-        🤖
+        <Icon name="bot" :size="26" />
     </button>
 
     <div
@@ -115,7 +116,7 @@ const onEnter = (e) => {
         <!-- Header -->
         <div class="flex items-center justify-between px-4 py-3 border-b border-border-main bg-gradient-to-r from-surface to-surface-variant">
             <div class="flex items-center gap-2">
-                <div class="h-9 w-9 rounded-full bg-brand text-white text-lg flex items-center justify-center">🤖</div>
+                <div class="h-9 w-9 rounded-full bg-brand text-white flex items-center justify-center"><Icon name="bot" :size="18" /></div>
                 <div>
                     <div class="font-bold text-text-main text-sm">Icarus</div>
                     <div class="text-xs text-text-muted">Analisando: {{ userName }}</div>
@@ -134,9 +135,7 @@ const onEnter = (e) => {
                     title="Minimizar (mantém mensagens)"
                     class="p-1.5 rounded-md text-text-muted hover:text-text-main hover:bg-surface-hover transition"
                 >
-                    <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 13H5" />
-                    </svg>
+                    <Icon name="minus" :size="16" />
                 </button>
             </div>
         </div>
@@ -197,9 +196,7 @@ const onEnter = (e) => {
                     :disabled="!canSend"
                     class="btn-primary px-3 py-2 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                    <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
-                    </svg>
+                    <Icon name="send" :size="20" />
                 </button>
             </div>
         </div>

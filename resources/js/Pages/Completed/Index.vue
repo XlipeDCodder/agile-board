@@ -3,6 +3,7 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import Modal from '@/Components/Modal.vue';
 import MarkdownEditor from '@/Components/MarkdownEditor.vue';
 import MarkdownViewer from '@/Components/MarkdownViewer.vue';
+import Icon from '@/Components/Icon.vue';
 import Pagination from '@/Components/Pagination.vue';
 import { Head, router, useForm } from '@inertiajs/vue3';
 import { ref, watch } from 'vue';
@@ -165,7 +166,7 @@ const submitReopen = () => {
 
     <AuthenticatedLayout>
         <template #header>
-            <h2 class="font-semibold text-xl text-text-primary leading-tight">Itens Concluídos</h2>
+            <h2 class="font-semibold text-xl text-text-primary leading-tight inline-flex items-center gap-2"><Icon name="completed" :size="22" /> Itens Concluídos</h2>
         </template>
 
         <div class="py-12">
@@ -216,17 +217,17 @@ const submitReopen = () => {
         <Modal :show="showItemModal" @close="closeModal" max-width="3xl">
             <div class="p-6 bg-surface-variant max-h-[90vh] overflow-y-auto">
                 <div class="flex items-start justify-between gap-4 mb-6">
-                    <h2 class="text-2xl font-bold text-text-main">✅ Item Concluído</h2>
+                    <h2 class="text-2xl font-bold text-text-main inline-flex items-center gap-2"><Icon name="completed" :size="22" /> Item Concluído</h2>
                     <button v-if="itemForm.id" type="button" @click="openReopenModal"
-                        class="px-3 py-1.5 rounded-lg text-sm font-medium bg-orange-500/10 text-orange-500 border border-orange-500/30 hover:bg-orange-500/20 transition">
-                        🔄 Reabrir card
+                        class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium bg-orange-500/10 text-orange-500 border border-orange-500/30 hover:bg-orange-500/20 transition">
+                        <Icon name="reopen" :size="16" /> Reabrir card
                     </button>
                 </div>
 
                 <div v-if="itemForm.id" class="flex gap-2 mb-6 border-b border-border-main">
-                    <button @click="activeTab = 'details'" :class="['px-4 py-2 font-medium border-b-2 transition', activeTab === 'details' ? 'border-brand text-brand' : 'border-transparent text-text-muted hover:text-text-main']">📝 Detalhes</button>
-                    <button @click="activeTab = 'subtasks'" :class="['px-4 py-2 font-medium border-b-2 transition', activeTab === 'subtasks' ? 'border-brand text-brand' : 'border-transparent text-text-muted hover:text-text-main']">📋 Subtarefas ({{ itemForm.subtasks?.filter(s => s.completed_at).length || 0 }}/{{ itemForm.subtasks?.length || 0 }})</button>
-                    <button @click="activeTab = 'comments'" :class="['px-4 py-2 font-medium border-b-2 transition', activeTab === 'comments' ? 'border-brand text-brand' : 'border-transparent text-text-muted hover:text-text-main']">💬 Comentários ({{ itemForm.comments?.length || 0 }})</button>
+                    <button @click="activeTab = 'details'" :class="['inline-flex items-center gap-1.5 px-4 py-2 font-medium border-b-2 transition', activeTab === 'details' ? 'border-brand text-brand' : 'border-transparent text-text-muted hover:text-text-main']"><Icon name="details" :size="16" /> Detalhes</button>
+                    <button @click="activeTab = 'subtasks'" :class="['inline-flex items-center gap-1.5 px-4 py-2 font-medium border-b-2 transition', activeTab === 'subtasks' ? 'border-brand text-brand' : 'border-transparent text-text-muted hover:text-text-main']"><Icon name="subtasks" :size="16" /> Subtarefas ({{ itemForm.subtasks?.filter(s => s.completed_at).length || 0 }}/{{ itemForm.subtasks?.length || 0 }})</button>
+                    <button @click="activeTab = 'comments'" :class="['inline-flex items-center gap-1.5 px-4 py-2 font-medium border-b-2 transition', activeTab === 'comments' ? 'border-brand text-brand' : 'border-transparent text-text-muted hover:text-text-main']"><Icon name="comments" :size="16" /> Comentários ({{ itemForm.comments?.length || 0 }})</button>
                 </div>
 
                 <form v-if="activeTab === 'details'" @submit.prevent="saveItem" class="space-y-6">
@@ -281,7 +282,7 @@ const submitReopen = () => {
                                 class="h-5 w-5 rounded border-border-main bg-surface-variant text-brand focus:ring-brand focus:ring-2 cursor-pointer flex-shrink-0">
                             <span class="flex-1 text-sm transition"
                                 :class="subtask.completed_at ? 'line-through text-text-muted' : 'text-text-main'">{{ subtask.title }}</span>
-                            <span v-if="subtask.completed_at" class="text-xs text-text-muted">✓ {{ new Date(subtask.completed_at).toLocaleDateString('pt-BR') }}</span>
+                            <span v-if="subtask.completed_at" class="inline-flex items-center gap-1 text-xs text-text-muted"><Icon name="check" :size="13" class="text-emerald-500" /> {{ new Date(subtask.completed_at).toLocaleDateString('pt-BR') }}</span>
                         </div>
                     </div>
                     <form @submit.prevent="addSubtask" class="flex gap-2 pt-4 border-t border-border-main">
@@ -296,7 +297,7 @@ const submitReopen = () => {
                         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                             <div>
                                 <label class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-surface-hover border border-border-main text-sm text-text-muted cursor-pointer hover:text-text-main transition">
-                                    📎 Anexar arquivos
+                                    <Icon name="attach" :size="16" /> Anexar arquivos
                                     <input type="file" id="completed-comment-files" @input="newCommentForm.files = $event.target.files" multiple class="hidden">
                                 </label>
                                 <div v-if="newCommentForm.files?.length > 0" class="mt-2 flex flex-wrap gap-2"><span v-for="f in newCommentForm.files" :key="f.name" class="text-xs px-2 py-1 rounded bg-brand/10 text-brand">{{ f.name }}</span></div>
@@ -336,7 +337,7 @@ const submitReopen = () => {
         <!-- Sub-modal: Reabertura de card -->
         <Modal :show="showReopenModal" @close="showReopenModal = false" max-width="3xl">
             <div class="p-6 bg-surface-variant max-h-[90vh] overflow-y-auto">
-                <h3 class="text-2xl font-bold text-text-main mb-1">🔄 Reabrir card</h3>
+                <h3 class="text-2xl font-bold text-text-main mb-1 inline-flex items-center gap-2"><Icon name="reopen" :size="22" /> Reabrir card</h3>
                 <p class="text-sm text-text-muted mb-5" v-if="originalItem">
                     Criando uma reabertura vinculada ao card <strong class="text-text-main">#{{ originalItem.id }} "{{ originalItem.title }}"</strong>. O card original permanecerá em Feito.
                 </p>
@@ -407,8 +408,8 @@ const submitReopen = () => {
                     <div class="flex justify-end gap-3 pt-4 border-t border-border-main">
                         <button type="button" @click="showReopenModal = false" class="btn-secondary">Cancelar</button>
                         <button type="submit" :disabled="reopenForm.processing || !reopenForm.justification || !reopenForm.title || !reopenForm.column_id"
-                            class="btn-primary disabled:opacity-50 disabled:cursor-not-allowed">
-                            🔄 Criar reabertura
+                            class="btn-primary inline-flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed">
+                            <Icon name="reopen" :size="16" /> Criar reabertura
                         </button>
                     </div>
                 </form>

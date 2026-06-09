@@ -1,6 +1,7 @@
 <script setup>
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import Modal from '@/Components/Modal.vue';
+import Icon from '@/Components/Icon.vue';
 import { Head, useForm, router, usePage } from '@inertiajs/vue3';
 import { ref, computed, onMounted, onUnmounted } from 'vue';
 
@@ -129,7 +130,7 @@ onUnmounted(() => {
     <Head title="Deploys" />
     <AuthenticatedLayout>
         <template #header>
-            <h2 class="font-bold text-4xl text-text-main leading-tight">🚀 Deploys</h2>
+            <h2 class="font-bold text-4xl text-text-main leading-tight inline-flex items-center gap-3"><Icon name="deploys" :size="32" /> Deploys</h2>
         </template>
 
         <div v-if="flashSuccess" class="mx-6 mt-4 p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-sm text-emerald-700">
@@ -142,7 +143,7 @@ onUnmounted(() => {
                 <!-- Pendente aprovação -->
                 <div class="bg-surface-variant border border-border-main rounded-2xl p-4 shadow-sm">
                     <h3 class="font-bold text-text-main mb-3 flex items-center gap-2">
-                        <span>🟡 Em HML aguardando aprovação</span>
+                        <span class="inline-flex items-center gap-1.5 text-amber-500"><Icon name="hourglass" :size="18" /> Em HML aguardando aprovação</span>
                         <span class="text-xs bg-amber-500/20 text-amber-600 px-2 py-0.5 rounded-full">{{ pendingStaging.length }}</span>
                     </h3>
                     <div class="space-y-3">
@@ -154,11 +155,11 @@ onUnmounted(() => {
                             <div class="text-xs text-text-muted mt-2">por {{ d.deployer?.name }} · {{ formatDate(d.created_at) }}</div>
                             <p v-if="d.notes" class="text-xs text-text-main mt-2 line-clamp-2 italic">{{ d.notes }}</p>
                             <div v-if="isAdmin && d.deployer?.id !== currentUserId" class="flex gap-2 mt-3" @click.stop>
-                                <button @click="approve(d)" class="flex-1 text-xs px-2 py-1 rounded bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20 font-bold">
-                                    ✓ Aprovar
+                                <button @click="approve(d)" class="flex-1 inline-flex items-center justify-center gap-1 text-xs px-2 py-1 rounded bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20 font-bold">
+                                    <Icon name="check" :size="14" /> Aprovar
                                 </button>
-                                <button @click="openReject(d)" class="flex-1 text-xs px-2 py-1 rounded bg-trello-red/10 text-trello-red hover:bg-trello-red/20 font-bold">
-                                    ✗ Rejeitar
+                                <button @click="openReject(d)" class="flex-1 inline-flex items-center justify-center gap-1 text-xs px-2 py-1 rounded bg-trello-red/10 text-trello-red hover:bg-trello-red/20 font-bold">
+                                    <Icon name="x" :size="14" /> Rejeitar
                                 </button>
                             </div>
                             <div v-else-if="isAdmin && d.deployer?.id === currentUserId" class="text-xs text-text-muted mt-3 italic">
@@ -174,7 +175,7 @@ onUnmounted(() => {
                 <!-- Aprovados, prontos pra produção -->
                 <div class="bg-surface-variant border border-border-main rounded-2xl p-4 shadow-sm">
                     <h3 class="font-bold text-text-main mb-3 flex items-center gap-2">
-                        <span>🟢 Aprovados — prontos pra prod</span>
+                        <span class="inline-flex items-center gap-1.5 text-emerald-600"><Icon name="check" :size="18" /> Aprovados — prontos pra prod</span>
                         <span class="text-xs bg-emerald-500/20 text-emerald-600 px-2 py-0.5 rounded-full">{{ approvedStaging.length }}</span>
                     </h3>
                     <div class="space-y-3">
@@ -187,8 +188,8 @@ onUnmounted(() => {
                                 aprovado por {{ d.approver?.name }} · {{ formatDate(d.approved_at) }}
                             </div>
                             <button @click.stop="openPromote(d)"
-                                    class="w-full mt-3 text-xs px-2 py-1.5 rounded bg-brand/10 text-brand hover:bg-brand/20 font-bold">
-                                🚀 Registrar deploy em produção
+                                    class="w-full mt-3 inline-flex items-center justify-center gap-1.5 text-xs px-2 py-1.5 rounded bg-brand/10 text-brand hover:bg-brand/20 font-bold">
+                                <Icon name="deploys" :size="14" /> Registrar deploy em produção
                             </button>
                         </div>
                         <div v-if="approvedStaging.length === 0" class="text-xs text-text-muted text-center py-6">
@@ -200,7 +201,7 @@ onUnmounted(() => {
                 <!-- Em produção -->
                 <div class="bg-surface-variant border border-border-main rounded-2xl p-4 shadow-sm">
                     <h3 class="font-bold text-text-main mb-3 flex items-center gap-2">
-                        <span>🚀 Em produção</span>
+                        <span class="inline-flex items-center gap-1.5 text-brand"><Icon name="deploys" :size="18" /> Em produção</span>
                         <span class="text-xs bg-brand/20 text-brand px-2 py-0.5 rounded-full">{{ completedProduction.length }}</span>
                     </h3>
                     <div class="space-y-3 max-h-[600px] overflow-y-auto">
@@ -212,8 +213,8 @@ onUnmounted(() => {
                             <div class="text-xs text-text-muted mt-2">
                                 por {{ d.deployer?.name }} · {{ formatDate(d.created_at) }}
                             </div>
-                            <span v-if="d.is_urgent" class="inline-block text-xs px-2 py-0.5 rounded bg-trello-red/10 text-trello-red font-bold mt-2">
-                                ⚠️ Urgente (pulou homologação)
+                            <span v-if="d.is_urgent" class="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded bg-trello-red/10 text-trello-red font-bold mt-2">
+                                <Icon name="warning" :size="13" /> Urgente (pulou homologação)
                             </span>
                         </div>
                         <div v-if="completedProduction.length === 0" class="text-xs text-text-muted text-center py-6">
@@ -228,7 +229,7 @@ onUnmounted(() => {
                 <button @click="showRejected = !showRejected"
                         class="w-full px-4 py-3 text-left flex items-center justify-between hover:bg-surface transition">
                     <h3 class="font-bold text-text-main flex items-center gap-2">
-                        <span>❌ Rejeitados</span>
+                        <span class="inline-flex items-center gap-1.5 text-trello-red"><Icon name="circle-x" :size="18" /> Rejeitados</span>
                         <span class="text-xs bg-trello-red/20 text-trello-red px-2 py-0.5 rounded-full">{{ rejectedStaging.length }}</span>
                     </h3>
                     <span class="text-text-muted text-sm">{{ showRejected ? '▲' : '▼' }}</span>

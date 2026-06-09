@@ -23,6 +23,7 @@
     "dependencies": {
         "chart.js": "^4.5.1",
         "dompurify": "^3.2.4",
+        "lucide-vue-next": "^1.0.0",
         "marked": "^15.0.7",
         "vue-chartjs": "^5.3.3",
         "vue-multiselect": "^3.3.1",

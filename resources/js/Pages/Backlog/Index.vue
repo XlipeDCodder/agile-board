@@ -3,6 +3,7 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import Modal from '@/Components/Modal.vue';
 import MarkdownEditor from '@/Components/MarkdownEditor.vue';
 import MarkdownViewer from '@/Components/MarkdownViewer.vue';
+import Icon from '@/Components/Icon.vue';
 import Pagination from '@/Components/Pagination.vue';
 import { Head, router, useForm } from '@inertiajs/vue3';
 import { ref } from 'vue';
@@ -111,7 +112,7 @@ const addComment = () => {
 
     <AuthenticatedLayout>
         <template #header>
-            <h2 class="font-semibold text-xl text-text-primary leading-tight">Backlog de Tarefas</h2>
+            <h2 class="font-semibold text-xl text-text-primary leading-tight inline-flex items-center gap-2"><Icon name="backlog" :size="22" /> Backlog de Tarefas</h2>
         </template>
 
         <div class="py-12">
@@ -134,8 +135,8 @@ const addComment = () => {
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-text-primary">
                                         <div class="flex items-center gap-2">
                                             <span>{{ item.title }}</span>
-                                            <span v-if="item.is_blocked" title="Impedido" class="text-trello-red text-xs">🚫</span>
-                                            <span v-if="item.type === 'reabertura'" :title="`Reaberto de #${item.reopened_from_id}`" class="text-orange-500 text-xs">🔄</span>
+                                            <span v-if="item.is_blocked" title="Impedido" class="text-trello-red"><Icon name="block" :size="14" /></span>
+                                            <span v-if="item.type === 'reabertura'" :title="`Reaberto de #${item.reopened_from_id}`" class="text-orange-500"><Icon name="reopen" :size="14" /></span>
                                         </div>
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-text-secondary">{{ item.column.name }}</td>
@@ -157,12 +158,12 @@ const addComment = () => {
 
         <Modal :show="showItemModal" @close="closeModal" max-width="3xl">
             <div class="p-6 bg-surface-variant max-h-[90vh] overflow-y-auto">
-                <h2 class="text-2xl font-bold mb-6 text-text-main">✏️ Editar Item</h2>
+                <h2 class="text-2xl font-bold mb-6 text-text-main inline-flex items-center gap-2"><Icon name="edit" :size="22" /> Editar Item</h2>
 
                 <div v-if="itemForm.id" class="flex gap-2 mb-6 border-b border-border-main">
-                    <button @click="activeTab = 'details'" :class="['px-4 py-2 font-medium border-b-2 transition', activeTab === 'details' ? 'border-brand text-brand' : 'border-transparent text-text-muted hover:text-text-main']">📝 Detalhes</button>
-                    <button @click="activeTab = 'subtasks'" :class="['px-4 py-2 font-medium border-b-2 transition', activeTab === 'subtasks' ? 'border-brand text-brand' : 'border-transparent text-text-muted hover:text-text-main']">📋 Subtarefas ({{ itemForm.subtasks?.filter(s => s.completed_at).length || 0 }}/{{ itemForm.subtasks?.length || 0 }})</button>
-                    <button @click="activeTab = 'comments'" :class="['px-4 py-2 font-medium border-b-2 transition', activeTab === 'comments' ? 'border-brand text-brand' : 'border-transparent text-text-muted hover:text-text-main']">💬 Comentários ({{ itemForm.comments?.length || 0 }})</button>
+                    <button @click="activeTab = 'details'" :class="['inline-flex items-center gap-1.5 px-4 py-2 font-medium border-b-2 transition', activeTab === 'details' ? 'border-brand text-brand' : 'border-transparent text-text-muted hover:text-text-main']"><Icon name="details" :size="16" /> Detalhes</button>
+                    <button @click="activeTab = 'subtasks'" :class="['inline-flex items-center gap-1.5 px-4 py-2 font-medium border-b-2 transition', activeTab === 'subtasks' ? 'border-brand text-brand' : 'border-transparent text-text-muted hover:text-text-main']"><Icon name="subtasks" :size="16" /> Subtarefas ({{ itemForm.subtasks?.filter(s => s.completed_at).length || 0 }}/{{ itemForm.subtasks?.length || 0 }})</button>
+                    <button @click="activeTab = 'comments'" :class="['inline-flex items-center gap-1.5 px-4 py-2 font-medium border-b-2 transition', activeTab === 'comments' ? 'border-brand text-brand' : 'border-transparent text-text-muted hover:text-text-main']"><Icon name="comments" :size="16" /> Comentários ({{ itemForm.comments?.length || 0 }})</button>
                 </div>
 
                 <form v-if="activeTab === 'details'" @submit.prevent="saveItem" class="space-y-6">
@@ -212,7 +213,7 @@ const addComment = () => {
                         </div>
                         <div v-if="itemForm.type === 'reabertura'" class="md:col-span-2 p-4 rounded-xl bg-orange-500/10 border border-orange-500/30 space-y-3">
                             <div>
-                                <label class="block text-sm font-bold text-text-main mb-1">🔄 Card original</label>
+                                <label class="block text-sm font-bold text-text-main mb-1 inline-flex items-center gap-1.5"><Icon name="reopen" :size="14" /> Card original</label>
                                 <p class="text-sm text-text-main">#{{ itemForm.reopened_from_id }}</p>
                             </div>
                             <div>
@@ -239,7 +240,7 @@ const addComment = () => {
                                 class="h-5 w-5 rounded border-border-main bg-surface-variant text-brand focus:ring-brand focus:ring-2 cursor-pointer flex-shrink-0">
                             <span class="flex-1 text-sm transition"
                                 :class="subtask.completed_at ? 'line-through text-text-muted' : 'text-text-main'">{{ subtask.title }}</span>
-                            <span v-if="subtask.completed_at" class="text-xs text-text-muted">✓ {{ new Date(subtask.completed_at).toLocaleDateString('pt-BR') }}</span>
+                            <span v-if="subtask.completed_at" class="inline-flex items-center gap-1 text-xs text-text-muted"><Icon name="check" :size="13" class="text-emerald-500" /> {{ new Date(subtask.completed_at).toLocaleDateString('pt-BR') }}</span>
                         </div>
                     </div>
                     <form @submit.prevent="addSubtask" class="flex gap-2 pt-4 border-t border-border-main">
@@ -254,7 +255,7 @@ const addComment = () => {
                         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                             <div>
                                 <label class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-surface-hover border border-border-main text-sm text-text-muted cursor-pointer hover:text-text-main transition">
-                                    📎 Anexar arquivos
+                                    <Icon name="attach" :size="16" /> Anexar arquivos
                                     <input type="file" id="backlog-comment-files" @input="newCommentForm.files = $event.target.files" multiple class="hidden">
                                 </label>
                                 <div v-if="newCommentForm.files?.length > 0" class="mt-2 flex flex-wrap gap-2"><span v-for="f in newCommentForm.files" :key="f.name" class="text-xs px-2 py-1 rounded bg-brand/10 text-brand">{{ f.name }}</span></div>

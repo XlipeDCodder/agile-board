@@ -1,5 +1,6 @@
 <script setup>
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
+import Icon from '@/Components/Icon.vue';
 import Timeline from '@/Components/Timeline.vue';
 import { Head, router, Link } from '@inertiajs/vue3';
 import { ref } from 'vue';
@@ -38,7 +39,7 @@ const formatDate = (dateString) => {
         <template #header>
             <div class="flex items-center gap-3">
                 <Link :href="route('admin.reports.index')" class="text-text-muted hover:text-text-main">←</Link>
-                <h2 class="font-bold text-4xl text-text-main leading-tight">📁 {{ project.name }}</h2>
+                <h2 class="font-bold text-4xl text-text-main leading-tight inline-flex items-center gap-3"><Icon name="projects" :size="32" /> {{ project.name }}</h2>
             </div>
         </template>
 

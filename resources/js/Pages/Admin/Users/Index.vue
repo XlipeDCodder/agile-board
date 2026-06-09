@@ -1,5 +1,6 @@
 <script setup>
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
+import Icon from '@/Components/Icon.vue';
 import Modal from '@/Components/Modal.vue';
 import { Head, useForm, usePage, router } from '@inertiajs/vue3';
 import { ref, computed } from 'vue';
@@ -99,13 +100,13 @@ const isSelf = (user) => user.id === currentUserId.value;
     <Head title="Usuários" />
     <AuthenticatedLayout>
         <template #header>
-            <h2 class="font-bold text-4xl text-text-main leading-tight">👥 Usuários</h2>
+            <h2 class="font-bold text-4xl text-text-main leading-tight inline-flex items-center gap-3"><Icon name="users" :size="32" /> Usuários</h2>
         </template>
 
         <div class="py-8 px-4 sm:px-6 lg:px-8 max-w-6xl mx-auto space-y-6">
             <!-- Feedback de senha temporária -->
             <div v-if="flashTempPassword" class="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-sm text-text-main">
-                <p class="font-bold mb-2">🔑 Senha temporária gerada</p>
+                <p class="font-bold mb-2 inline-flex items-center gap-1.5"><Icon name="key" :size="16" /> Senha temporária gerada</p>
                 <p class="text-text-muted mb-2">Anote ou copie esta senha agora — ela <strong>não será exibida novamente</strong>. O usuário será obrigado a trocar no primeiro login.</p>
                 <div class="flex items-center gap-2">
                     <code class="flex-1 px-3 py-2 rounded-lg bg-surface border border-border-main font-mono text-base select-all">{{ flashTempPassword }}</code>
@@ -129,8 +130,9 @@ const isSelf = (user) => user.id === currentUserId.value;
                             Quando habilitado, qualquer pessoa com o link da página inicial pode criar uma conta. Quando desabilitado, somente você (admin) cadastra usuários — a página de registro fica bloqueada mesmo via URL direta.
                         </p>
                         <p class="text-sm mt-2">
-                            Status atual: <strong :class="registrationEnabled ? 'text-emerald-500' : 'text-trello-red'">
-                                {{ registrationEnabled ? '✅ Habilitado' : '🔒 Desabilitado' }}
+                            Status atual: <strong :class="['inline-flex items-center gap-1', registrationEnabled ? 'text-emerald-500' : 'text-trello-red']">
+                                <Icon :name="registrationEnabled ? 'check' : 'key'" :size="14" />
+                                {{ registrationEnabled ? 'Habilitado' : 'Desabilitado' }}
                             </strong>
                         </p>
                     </div>
@@ -174,9 +176,9 @@ const isSelf = (user) => user.id === currentUserId.value;
                             </td>
                             <td class="px-4 py-3 text-text-muted text-xs">{{ formatDate(user.created_at) }}</td>
                             <td class="px-4 py-3">
-                                <span v-if="user.deleted_at" class="text-xs font-bold text-trello-red">🗑️ Excluído</span>
-                                <span v-else-if="user.must_change_password" class="text-xs font-bold text-amber-600">🔑 Pendente troca</span>
-                                <span v-else class="text-xs text-emerald-500">✅ Ativo</span>
+                                <span v-if="user.deleted_at" class="inline-flex items-center gap-1 text-xs font-bold text-trello-red"><Icon name="trash" :size="13" /> Excluído</span>
+                                <span v-else-if="user.must_change_password" class="inline-flex items-center gap-1 text-xs font-bold text-amber-600"><Icon name="key" :size="13" /> Pendente troca</span>
+                                <span v-else class="inline-flex items-center gap-1 text-xs text-emerald-500"><Icon name="check" :size="13" /> Ativo</span>
                             </td>
                             <td class="px-4 py-3 text-right">
                                 <div class="flex justify-end gap-2">

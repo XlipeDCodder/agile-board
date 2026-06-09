@@ -3,6 +3,7 @@ import { ref, computed, onMounted } from 'vue';
 import { Link, usePage, router } from '@inertiajs/vue3';
 import ThemeToggle from '@/Components/ThemeToggle.vue';
 import Modal from '@/Components/Modal.vue';
+import Icon from '@/Components/Icon.vue';
 
 const emit = defineEmits(['toggle']);
 const isExpanded = ref(true);
@@ -22,20 +23,20 @@ onMounted(() => {
 });
 
 const navItems = [
-    { icon: '📊', label: 'Dashboard', route: 'dashboard', icon_svg: 'M3 12l2-3m0 0l7-4 7 4M5 9v10a1 1 0 001 1h12a1 1 0 001-1V9m-9 11l4-4m0 0l4 4m-4-4v4' },
-    { icon: '📋', label: 'Quadro', route: 'board', icon_svg: 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2' },
-    { icon: '📚', label: 'Backlog', route: 'backlog.index', icon_svg: 'M4 6h16M4 12h16M4 18h16' },
-    { icon: '✅', label: 'Concluídos', route: 'completed.index', icon_svg: 'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z' },
-    { icon: '📁', label: 'Projetos', route: 'projects.index', icon_svg: 'M5 13l4 4L19 7' },
-    { icon: '⏱️', label: 'Apontamento', route: 'time-entries.index', icon_svg: 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z' },
-    { icon: '🚀', label: 'Deploys', route: 'deploys.index', icon_svg: 'M5 10l7-7m0 0l7 7m-7-7v18' },
+    { icon: 'dashboard', label: 'Dashboard', route: 'dashboard' },
+    { icon: 'board', label: 'Quadro', route: 'board' },
+    { icon: 'backlog', label: 'Backlog', route: 'backlog.index' },
+    { icon: 'completed', label: 'Concluídos', route: 'completed.index' },
+    { icon: 'projects', label: 'Projetos', route: 'projects.index' },
+    { icon: 'time-entries', label: 'Apontamento', route: 'time-entries.index' },
+    { icon: 'deploys', label: 'Deploys', route: 'deploys.index' },
 ];
 
 const adminItems = [
-    { icon: '⚙️', label: 'Admin', route: 'admin.columns.index', icon_svg: 'M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z' },
-    { icon: '📊', label: 'Relatórios', route: 'admin.reports.index', icon_svg: 'M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z' },
-    { icon: '👥', label: 'Usuários', route: 'admin.users.index', icon_svg: 'M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z' },
-    { icon: '🤖', label: 'Bot Config', route: 'admin.bot-config.index', icon_svg: 'M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z', requiresConfirm: true },
+    { icon: 'admin', label: 'Admin', route: 'admin.columns.index' },
+    { icon: 'reports', label: 'Relatórios', route: 'admin.reports.index' },
+    { icon: 'users', label: 'Usuários', route: 'admin.users.index' },
+    { icon: 'bot', label: 'Bot Config', route: 'admin.bot-config.index', requiresConfirm: true },
 ];
 
 const page = usePage();
@@ -99,9 +100,7 @@ const cancelNavigation = () => {
                         isActive(item.route) ? 'active' : ''
                     ]"
                 >
-                    <svg class="w-5 h-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" :d="item.icon_svg" />
-                    </svg>
+                    <Icon :name="item.icon" :size="20" class="flex-shrink-0" />
                     <span v-if="isExpanded" class="text-sm font-medium">{{ item.label }}</span>
                     <div v-if="!isExpanded" class="absolute left-full ml-2 px-2 py-1 bg-surface-variant text-text-main text-xs rounded-lg whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50 shadow-lg">
                         {{ item.label }}
@@ -125,9 +124,7 @@ const cancelNavigation = () => {
                             isActive(item.route) ? 'active' : ''
                         ]"
                     >
-                        <svg class="w-5 h-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" :d="item.icon_svg" />
-                        </svg>
+                        <Icon :name="item.icon" :size="20" class="flex-shrink-0" />
                         <span v-if="isExpanded" class="text-sm font-medium">{{ item.label }}</span>
                         <div v-if="!isExpanded" class="absolute left-full ml-2 px-2 py-1 bg-surface-variant text-text-main text-xs rounded-lg whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50 shadow-lg">
                             {{ item.label }}
@@ -141,9 +138,7 @@ const cancelNavigation = () => {
                             isActive(item.route) ? 'active' : ''
                         ]"
                     >
-                        <svg class="w-5 h-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" :d="item.icon_svg" />
-                        </svg>
+                        <Icon :name="item.icon" :size="20" class="flex-shrink-0" />
                         <span v-if="isExpanded" class="text-sm font-medium">{{ item.label }}</span>
                         <div v-if="!isExpanded" class="absolute left-full ml-2 px-2 py-1 bg-surface-variant text-text-main text-xs rounded-lg whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50 shadow-lg">
                             {{ item.label }}

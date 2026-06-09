@@ -1,6 +1,7 @@
 <script setup>
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import Modal from '@/Components/Modal.vue';
+import Icon from '@/Components/Icon.vue';
 import { Head, useForm, router } from '@inertiajs/vue3';
 import { ref } from 'vue';
 
@@ -94,7 +95,7 @@ const deleteProject = (id) => {
     <AuthenticatedLayout>
         <template #header>
             <div class="flex justify-between items-center">
-                <h2 class="font-bold text-4xl text-text-main leading-tight">📁 Projetos</h2>
+                <h2 class="font-bold text-4xl text-text-main leading-tight inline-flex items-center gap-3"><Icon name="projects" :size="32" /> Projetos</h2>
                 <button 
                     @click="openCreateModal" 
                     class="btn-primary flex items-center gap-2 shadow-lg hover:shadow-xl transition"
@@ -141,8 +142,8 @@ const deleteProject = (id) => {
                                 {{ project.name }}
                             </h3>
                             <div v-if="project.status === 'completed'" class="mt-2">
-                                <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-trello-green/10 text-trello-green">
-                                    ✓ Concluído
+                                <span class="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold bg-trello-green/10 text-trello-green">
+                                    <Icon name="check" :size="13" /> Concluído
                                 </span>
                             </div>
                         </div>
@@ -217,8 +218,9 @@ const deleteProject = (id) => {
         <!-- Modal para criar/editar projeto -->
         <Modal :show="showModal" @close="closeModal" max-width="md">
             <div class="p-6 bg-surface-variant">
-                <h2 class="text-2xl font-bold mb-6 text-text-main">
-                    {{ isEditing ? '✏️ Editar Projeto' : '➕ Novo Projeto' }}
+                <h2 class="text-2xl font-bold mb-6 text-text-main inline-flex items-center gap-2">
+                    <Icon :name="isEditing ? 'edit' : 'plus'" :size="22" />
+                    {{ isEditing ? 'Editar Projeto' : 'Novo Projeto' }}
                 </h2>
 
                 <form @submit.prevent="saveProject" class="space-y-6">

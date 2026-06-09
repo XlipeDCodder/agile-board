@@ -1,5 +1,6 @@
 <script setup>
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
+import Icon from '@/Components/Icon.vue';
 import { Head, useForm, router } from '@inertiajs/vue3';
 import { ref, computed } from 'vue';
 import Modal from '@/Components/Modal.vue';
@@ -182,7 +183,7 @@ const cancelEdit = () => {
 
     <AuthenticatedLayout>
         <template #header>
-            <h2 class="font-semibold text-xl text-text-primary leading-tight">Apontamento de Horas</h2>
+            <h2 class="font-semibold text-xl text-text-primary leading-tight inline-flex items-center gap-2"><Icon name="time-entries" :size="22" /> Apontamento de Horas</h2>
         </template>
 
         <div class="py-12">
