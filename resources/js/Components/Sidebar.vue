@@ -4,6 +4,7 @@ import { Link, usePage, router } from '@inertiajs/vue3';
 import ThemeToggle from '@/Components/ThemeToggle.vue';
 import Modal from '@/Components/Modal.vue';
 import Icon from '@/Components/Icon.vue';
+import Avatar from '@/Components/Avatar.vue';
 
 const emit = defineEmits(['toggle']);
 const isExpanded = ref(true);
@@ -178,9 +179,7 @@ const cancelNavigation = () => {
             <div class="flex items-center gap-3 p-2 rounded-lg hover:bg-surface-hover transition cursor-pointer group"
                  @click="$emit('open-user-menu')"
                  :class="{'justify-center': !isExpanded}">
-                <div class="flex h-8 w-8 items-center justify-center rounded-full bg-brand text-white text-xs font-bold flex-shrink-0">
-                    {{ page.props.auth.user.name.charAt(0).toUpperCase() }}
-                </div>
+                <Avatar :user="page.props.auth.user" :size="32" />
                 <div v-if="isExpanded" class="min-w-0">
                     <p class="text-sm font-medium text-text-main truncate">{{ page.props.auth.user.name }}</p>
                     <p class="text-xs text-text-muted truncate">{{ page.props.auth.user.email }}</p>

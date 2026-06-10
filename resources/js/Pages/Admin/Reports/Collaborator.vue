@@ -1,6 +1,7 @@
 <script setup>
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import Icon from '@/Components/Icon.vue';
+import Avatar from '@/Components/Avatar.vue';
 import Timeline from '@/Components/Timeline.vue';
 import IcarusChat from '@/Components/IcarusChat.vue';
 import { Head, router, Link } from '@inertiajs/vue3';
@@ -35,9 +36,7 @@ const onChangeUser = () => {
         <div class="py-8 px-4 sm:px-6 lg:px-8 max-w-5xl mx-auto space-y-6">
             <div class="bg-surface-variant border border-border-main rounded-2xl p-6 shadow-sm">
                 <div class="flex flex-col md:flex-row md:items-center gap-4 mb-4">
-                    <div class="h-14 w-14 rounded-full bg-brand text-white text-xl font-bold flex items-center justify-center">
-                        {{ collaborator.name.charAt(0).toUpperCase() }}
-                    </div>
+                    <Avatar :user="collaborator" :size="56" />
                     <div class="flex-1">
                         <div class="font-bold text-text-main">{{ collaborator.name }}</div>
                         <div class="text-sm text-text-muted">{{ collaborator.email }}</div>

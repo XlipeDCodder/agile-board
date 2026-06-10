@@ -87,6 +87,7 @@ class ReportController extends Controller
                 'email' => $user->email,
                 'is_admin' => (bool) $user->is_admin,
                 'joined_at' => $user->created_at?->toIso8601String(),
+                'avatar_url' => $user->avatar_url,
             ],
             'stats' => [
                 'items_created' => $createdTotal,

@@ -37,6 +37,7 @@ class HandleInertiaRequests extends Middleware
                     'name' => $request->user()->name,
                     'email' => $request->user()->email,
                     'is_admin' => $request->user()->is_admin, // AQUI ESTÁ A ADIÇÃO
+                    'avatar_url' => $request->user()->avatar_url,
                 ] : null,
             ],
 

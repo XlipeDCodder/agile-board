@@ -4,6 +4,7 @@ import Modal from '@/Components/Modal.vue';
 import MarkdownEditor from '@/Components/MarkdownEditor.vue';
 import MarkdownViewer from '@/Components/MarkdownViewer.vue';
 import Icon from '@/Components/Icon.vue';
+import Avatar from '@/Components/Avatar.vue';
 import { Head, router, useForm } from '@inertiajs/vue3';
 import { ref, computed, onMounted, watch } from 'vue';
 import draggable from 'vuedraggable';
@@ -569,7 +570,7 @@ const matchesFilter = (item) => {
                                     <div class="flex items-center justify-between">
                                         <div v-if="item.subtasks?.length > 0" class="inline-flex items-center gap-1 text-xs text-text-muted font-medium"><Icon name="subtasks" :size="13" /> {{ item.subtasks.filter(s => s.completed_at).length }}/{{ item.subtasks.length }}</div>
                                         <div class="flex -space-x-2">
-                                            <div v-for="assignee in item.assignees.slice(0, 3)" :key="assignee.id" class="h-6 w-6 rounded-full ring-2 ring-surface-variant bg-brand text-white flex items-center justify-center text-xs font-bold" :title="assignee.name">{{ assignee.name.charAt(0).toUpperCase() }}</div>
+                                            <Avatar v-for="assignee in item.assignees.slice(0, 3)" :key="assignee.id" :user="assignee" :size="24" class="ring-2 ring-surface-variant" :title="assignee.name" />
                                         </div>
                                     </div>
                                 </div>
@@ -769,7 +770,7 @@ const matchesFilter = (item) => {
                     <div class="space-y-4 max-h-96 overflow-y-auto">
                         <div v-for="comment in itemForm.comments" :key="comment.id" class="p-4 rounded-xl bg-surface border border-border-main shadow-sm">
                             <div class="flex gap-3 mb-3">
-                                <div class="h-8 w-8 rounded-full bg-brand text-white flex items-center justify-center text-xs font-bold">{{ comment.user?.name?.charAt(0) }}</div>
+                                <Avatar :user="comment.user" :size="32" :title="comment.user?.name" />
                                 <div class="flex-1 min-w-0">
                                     <div class="flex items-center gap-2 mb-1"><p class="font-bold text-text-main text-sm">{{ comment.user?.name }}</p><p class="text-xs text-text-muted">{{ new Date(comment.created_at).toLocaleString() }}</p></div>
                                     <MarkdownViewer :source="comment.body" class="text-sm text-text-main" />

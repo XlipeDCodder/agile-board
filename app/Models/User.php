@@ -26,7 +26,21 @@ class User extends Authenticatable
         'password',
         'is_admin',
         'must_change_password',
+        'avatar_path',
     ];
+
+    /**
+     * avatar_url entra em TODA serialização de User (cards, comentários,
+     * dashboard) — o frontend decide entre foto e iniciais por esse campo.
+     *
+     * @var array<int, string>
+     */
+    protected $appends = ['avatar_url'];
+
+    public function getAvatarUrlAttribute(): ?string
+    {
+        return $this->avatar_path ? '/storage/'.$this->avatar_path : null;
+    }
 
     /**
      * The attributes that should be hidden for serialization.

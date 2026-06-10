@@ -1,6 +1,7 @@
 <script setup>
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import Icon from '@/Components/Icon.vue';
+import Avatar from '@/Components/Avatar.vue';
 import { Head } from '@inertiajs/vue3';
 import PieChart from '@/Components/PieChart.vue';
 import Modal from '@/Components/Modal.vue';
@@ -214,9 +215,7 @@ const getRankColor = (index) => {
                                             </td>
                                             <td class="px-6 py-4 whitespace-nowrap">
                                                 <div class="flex items-center">
-                                                    <div class="h-8 w-8 rounded-full bg-secondary flex items-center justify-center border border-accent mr-3">
-                                                        <span class="text-sm font-bold text-text-primary">{{ user.name.charAt(0) }}</span>
-                                                    </div>
+                                                    <Avatar :user="user" :size="32" class="mr-3" />
                                                     <div class="text-sm font-medium text-text-primary">{{ user.name }}</div>
                                                 </div>
                                             </td>
@@ -257,9 +256,7 @@ const getRankColor = (index) => {
                                 @click="openUserModal(user)"
                                 class="flex flex-col items-center cursor-pointer hover:opacity-80 transition flex-shrink-0"
                             >
-                                <div class="h-12 w-12 rounded-full bg-primary flex items-center justify-center border-2 border-accent">
-                                    <span class="text-lg font-bold text-text-primary">{{ user.name.charAt(0) }}</span>
-                                </div>
+                                <Avatar :user="user" :size="48" class="border-2 border-accent" />
                                 <span class="text-xs text-text-secondary mt-1 whitespace-nowrap">{{ user.name.split(' ')[0] }}</span>
                                 <span class="text-xs font-bold text-blue-500">{{ user.assigned_items.length }} cards</span>
                             </div>
@@ -275,9 +272,7 @@ const getRankColor = (index) => {
                                 :key="user.id" 
                                 class="flex flex-col items-center flex-shrink-0 opacity-75"
                             >
-                                <div class="h-12 w-12 rounded-full bg-secondary flex items-center justify-center border-2 border-green-500">
-                                    <span class="text-lg font-bold text-text-primary">{{ user.name.charAt(0) }}</span>
-                                </div>
+                                <Avatar :user="user" :size="48" class="border-2 border-green-500" />
                                 <span class="text-xs text-text-secondary mt-1 whitespace-nowrap">{{ user.name.split(' ')[0] }}</span>
                                 <span class="text-xs font-bold text-green-500">Livre</span>
                             </div>
