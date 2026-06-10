@@ -76,6 +76,18 @@ class BoardController extends Controller
                             abort(422, "Cards concluídos não podem voltar para colunas anteriores. Use a opção 'Reabrir' no card para criar uma reabertura vinculada.");
                         }
 
+                        // Trava: card só entra em "Feito" com TODAS as subtarefas
+                        // concluídas. (Antes o sistema auto-concluía as subtarefas;
+                        // regra nova: o dev precisa concluí-las explicitamente.)
+                        // O frontend já bloqueia no drag com popup; aqui é defesa
+                        // em profundidade contra clientes fora do fluxo normal.
+                        if ($doneColumnId
+                            && $oldColumnId != $doneColumnId
+                            && $newColumnId == $doneColumnId
+                            && $item->subtasks()->whereNull('completed_at')->exists()) {
+                            abort(422, "O card #{$item->id} ainda tem subtarefas abertas. Conclua todas antes de mover para Feito.");
+                        }
+
                         $item->fill([
                             'column_id' => $newColumnId,
                             'order_in_column' => $order + 1,
@@ -94,7 +106,8 @@ class BoardController extends Controller
                         }
 
                         if ($doneColumnId && $item->column_id == $doneColumnId) {
-                            $item->subtasks()->update(['completed_at' => now()]);
+                            // (Não auto-conclui mais as subtarefas — a trava acima
+                            // garante que todas já chegaram aqui concluídas.)
 
                             // Auto-desimpede ao concluir: cards em "Feito" não
                             // podem ficar impedidos. Mantém histórico via

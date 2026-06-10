@@ -269,9 +269,24 @@ function onDragEnd() {
     });
 }
 
+// Popup de subtarefas abertas: bloqueia mover pra Feito e oferece
+// abrir o card direto na aba de subtarefas.
+const showOpenSubtasksModal = ref(false);
+const blockedByOpenSubtasks = ref(null); // { item, count }
+
+const openSubtasksFromPopup = () => {
+    const item = blockedByOpenSubtasks.value?.item;
+    showOpenSubtasksModal.value = false;
+    if (item) {
+        openEditItemModal(item);
+        activeTab.value = 'subtasks';
+    }
+};
+
 /**
  * Callback do vuedraggable: bloqueia drop quando origem é coluna "Feito"
- * e destino é outra coluna qualquer.
+ * e destino é outra coluna qualquer; e bloqueia entrada em "Feito" quando
+ * o card ainda tem subtarefas abertas (regra: concluir todas antes).
  */
 function canMove(evt) {
     // Estratégia: identifica a coluna pelos items (referência ao array).
@@ -284,6 +299,14 @@ function canMove(evt) {
     if (fromColumn.name === 'Feito' && toColumn.id !== fromColumn.id) {
         showToast('🚫 Cards concluídos não podem voltar para colunas anteriores. Abra o card e clique em "🔄 Reabrir card" para criar uma reabertura vinculada.');
         return false;
+    }
+    if (toColumn.name === 'Feito' && fromColumn.id !== toColumn.id) {
+        const openSubtasks = (draggedItem.subtasks || []).filter(s => !s.completed_at);
+        if (openSubtasks.length > 0) {
+            blockedByOpenSubtasks.value = { item: draggedItem, count: openSubtasks.length };
+            showOpenSubtasksModal.value = true;
+            return false;
+        }
     }
     return true;
 }
@@ -902,6 +925,29 @@ const matchesFilter = (item) => {
                 <button class="absolute top-4 right-4 text-white hover:text-gray-300" @click.stop="expandedImage = null">
                     <Icon name="x" :size="32" />
                 </button>
+            </div>
+        </Modal>
+
+        <!-- Popup: card tem subtarefas abertas, não pode ir pra Feito -->
+        <Modal :show="showOpenSubtasksModal" @close="showOpenSubtasksModal = false" max-width="md">
+            <div class="p-6 bg-surface-variant">
+                <div class="flex items-start gap-3 mb-4">
+                    <div class="text-amber-500 flex-shrink-0 mt-0.5"><Icon name="warning" :size="28" /></div>
+                    <div>
+                        <h3 class="text-lg font-bold text-text-main">Subtarefas abertas</h3>
+                        <p class="text-sm text-text-muted mt-1" v-if="blockedByOpenSubtasks">
+                            O card <strong class="text-text-main">#{{ blockedByOpenSubtasks.item.id }} "{{ blockedByOpenSubtasks.item.title }}"</strong>
+                            ainda tem <strong class="text-amber-600">{{ blockedByOpenSubtasks.count }} subtarefa(s) aberta(s)</strong>.
+                            Conclua todas antes de mover o card para "Feito".
+                        </p>
+                    </div>
+                </div>
+                <div class="flex justify-end gap-3 pt-4 border-t border-border-main">
+                    <button type="button" @click="showOpenSubtasksModal = false" class="btn-secondary">Fechar</button>
+                    <button type="button" @click="openSubtasksFromPopup" class="btn-primary inline-flex items-center gap-1.5">
+                        <Icon name="subtasks" :size="16" /> Ver subtarefas
+                    </button>
+                </div>
             </div>
         </Modal>
 
